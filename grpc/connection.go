@@ -4,12 +4,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"strings"
-	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/keepalive"
 )
 
 func GetGrpcConnection(grpcUri string) (*grpc.ClientConn, error) {
@@ -30,11 +28,6 @@ func GetGrpcConnection(grpcUri string) (*grpc.ClientConn, error) {
 	// Set up gRPC dial options with custom keep alive and timeout values
 	opts := []grpc.DialOption{
 		transportCredentials,
-		grpc.WithKeepaliveParams(keepalive.ClientParameters{
-			Time:                10 * time.Second,
-			Timeout:             5 * time.Second,
-			PermitWithoutStream: true,
-		}),
 	}
 
 	return grpc.Dial(
