@@ -19,8 +19,10 @@ type Logger struct {
 	prefix string
 }
 
-func NewLogger() *Logger {
+func NewLogger(logLevel zerolog.Level) *Logger {
 	prefix := ""
+	zerolog.SetGlobalLevel(logLevel)
+
 	return newLoggerWithPrefix(prefix)
 }
 
