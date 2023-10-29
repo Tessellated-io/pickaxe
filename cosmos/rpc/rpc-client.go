@@ -18,6 +18,7 @@ type RpcClient interface {
 	SimulateTx(ctx context.Context, tx authsigning.Tx, txConfig client.TxConfig, gasFactor float64) (*SimulationResult, error)
 
 	GetAccountData(ctx context.Context, address string) (*AccountData, error)
+	GetBalance(ctx context.Context, address, denom string) (*sdk.Coin, error)
 	GetDelegators(ctx context.Context, validatorAddress string) ([]string, error)
 	GetGrants(ctx context.Context, botAddress string) ([]*authztypes.GrantAuthorization, error)
 	GetPendingRewards(ctx context.Context, delegator, validator, stakingDenom string) (sdk.Dec, error)
