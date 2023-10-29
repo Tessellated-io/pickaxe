@@ -10,7 +10,10 @@ import (
 
 	retry "github.com/avast/retry-go/v4"
 	"github.com/tessellated-io/pickaxe/arrays"
+<<<<<<< HEAD
 	"github.com/tessellated-io/pickaxe/cosmos/util"
+=======
+>>>>>>> origin/main
 	"github.com/tessellated-io/pickaxe/grpc"
 	"github.com/tessellated-io/pickaxe/log"
 
@@ -22,7 +25,10 @@ import (
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	authztypes "github.com/cosmos/cosmos-sdk/x/authz"
+<<<<<<< HEAD
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
+=======
+>>>>>>> origin/main
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
@@ -36,7 +42,10 @@ type grpcClient struct {
 
 	authClient         authtypes.QueryClient
 	authzClient        authztypes.QueryClient
+<<<<<<< HEAD
 	bankClient         banktypes.QueryClient
+=======
+>>>>>>> origin/main
 	distributionClient distributiontypes.QueryClient
 	stakingClient      stakingtypes.QueryClient
 	txClient           txtypes.ServiceClient
@@ -345,7 +354,11 @@ func (r *grpcClient) getGrants(ctx context.Context, botAddress string) ([]*authz
 
 	grants, err := retrievePaginatedData(ctx, r, "grants", getGrantsFunc)
 	if err != nil {
+<<<<<<< HEAD
 		return nil, err
+=======
+		r.log.Error().Err(err).Str("bot address", botAddress).Msg("Failed to retrieve grants")
+>>>>>>> origin/main
 	}
 	r.log.Debug().Int("num grants", len(grants)).Str("bot address", botAddress).Msg("Retrieved grants")
 
