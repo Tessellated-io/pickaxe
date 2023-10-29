@@ -10,6 +10,7 @@ import (
 
 	retry "github.com/avast/retry-go/v4"
 	"github.com/tessellated-io/pickaxe/arrays"
+	"github.com/tessellated-io/pickaxe/cosmos/util"
 	"github.com/tessellated-io/pickaxe/grpc"
 	"github.com/tessellated-io/pickaxe/log"
 
@@ -21,6 +22,7 @@ import (
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	authztypes "github.com/cosmos/cosmos-sdk/x/authz"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 	distributiontypes "github.com/cosmos/cosmos-sdk/x/distribution/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
@@ -34,6 +36,7 @@ type grpcClient struct {
 
 	authClient         authtypes.QueryClient
 	authzClient        authztypes.QueryClient
+	bankClient         banktypes.QueryClient
 	distributionClient distributiontypes.QueryClient
 	stakingClient      stakingtypes.QueryClient
 	txClient           txtypes.ServiceClient
@@ -63,6 +66,7 @@ func NewGRpcClient(nodeGrpcUri string, cdc *codec.ProtoCodec, log *log.Logger) (
 
 	authClient := authtypes.NewQueryClient(conn)
 	authzClient := authztypes.NewQueryClient(conn)
+	bankClient := banktypes.NewQueryClient(conn)
 	distributionClient := distributiontypes.NewQueryClient(conn)
 	stakingClient := stakingtypes.NewQueryClient(conn)
 	txClient := txtypes.NewServiceClient(conn)
@@ -72,6 +76,7 @@ func NewGRpcClient(nodeGrpcUri string, cdc *codec.ProtoCodec, log *log.Logger) (
 
 		authClient:         authClient,
 		authzClient:        authzClient,
+		bankClient:         bankClient,
 		distributionClient: distributionClient,
 		stakingClient:      stakingClient,
 		txClient:           txClient,
@@ -81,6 +86,54 @@ func NewGRpcClient(nodeGrpcUri string, cdc *codec.ProtoCodec, log *log.Logger) (
 
 		log: log,
 	}, nil
+}
+
+func (r *grpcClient) GetBalance(ctx context.Context, address, denom string) (*sdk.Coin, error) {
+	var balance *sdk.Coin
+	var err error
+
+	err = retry.Do(func() error {
+		balance, err = r.getBalance(ctx, address, denom)
+		return err
+	}, r.delay, r.attempts, retry.Context(ctx))
+	if err != nil {
+		err = errors.Unwrap(err)
+	}
+
+	return balance, err
+}
+
+// private function with retries
+func (r *grpcClient) getBalance(ctx context.Context, address, denom string) (*sdk.Coin, error) {
+	getBalancesFunc := func(ctx context.Context, pageKey []byte) (*paginatedRpcResponse[sdk.Coin], error) {
+		pagination := &query.PageRequest{
+			Key:   pageKey,
+			Limit: pageSize,
+		}
+
+		request := &banktypes.QueryAllBalancesRequest{
+			Address:    address,
+			Pagination: pagination,
+		}
+
+		response, err := r.bankClient.AllBalances(ctx, request)
+		if err != nil {
+			return nil, err
+		}
+
+		return &paginatedRpcResponse[sdk.Coin]{
+			data:    response.Balances,
+			nextKey: response.Pagination.NextKey,
+		}, nil
+	}
+
+	balances, err := retrievePaginatedData(ctx, r, "balances", getBalancesFunc)
+	if err != nil {
+		return nil, err
+	}
+	r.log.Debug().Int("num balances", len(balances)).Str("address", address).Str("denom", denom).Msg("Retrieved balances")
+
+	return util.ExtractCoin(denom, balances)
 }
 
 func (r *grpcClient) GetPendingRewards(ctx context.Context, delegator, validator, stakingDenom string) (sdk.Dec, error) {
@@ -292,7 +345,7 @@ func (r *grpcClient) getGrants(ctx context.Context, botAddress string) ([]*authz
 
 	grants, err := retrievePaginatedData(ctx, r, "grants", getGrantsFunc)
 	if err != nil {
-		r.log.Error().Err(err).Str("bot address", botAddress).Msg("Failed to retrieve grants")
+		return nil, err
 	}
 	r.log.Debug().Int("num grants", len(grants)).Str("bot address", botAddress).Msg("Retrieved grants")
 
