@@ -3,6 +3,7 @@ module github.com/tessellated-io/pickaxe
 go 1.20
 
 require (
+	github.com/avast/retry-go/v4 v4.5.0
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/cometbft/cometbft v0.37.2
 	github.com/cosmos/cosmos-sdk v0.47.4
