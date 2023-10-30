@@ -54,7 +54,6 @@ func (rc *RegistryClient) GetChainInfo(ctx context.Context, chainName string) (*
 	return chainInfo, err
 }
 
-// TODO: Add retries
 func (rc *RegistryClient) ChainNameForChainID(ctx context.Context, chainID string) (string, error) {
 	var chainName string
 	var err error
