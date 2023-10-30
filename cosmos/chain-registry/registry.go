@@ -23,10 +23,10 @@ type RegistryClient struct {
 	// Cache of chain names to chain ID
 	chainNameToChainID map[string]string
 
-	log log.Logger
+	log *log.Logger
 }
 
-func NewRegistryClient(log log.Logger) *RegistryClient {
+func NewRegistryClient(log *log.Logger) *RegistryClient {
 	return &RegistryClient{
 		attempts: retry.Attempts(5),
 		delay:    retry.Delay(1 * time.Second),
