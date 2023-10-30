@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	retry "github.com/avast/retry-go/v4"
@@ -14,12 +15,19 @@ import (
 type RegistryClient struct {
 	attempts retry.Option
 	delay    retry.Option
+
+	// TODO
+	// Cache of all chains
+	// allChainNames []string
 }
 
 func NewRegistryClient() *RegistryClient {
 	return &RegistryClient{
 		attempts: retry.Attempts(5),
 		delay:    retry.Delay(1 * time.Second),
+
+		// Initially empty chain name cache
+		// allChainNames: []string{},
 	}
 }
 
@@ -36,6 +44,36 @@ func (rc *RegistryClient) GetChainInfo(ctx context.Context, chainName string) (*
 	}
 
 	return chainInfo, err
+}
+
+// TODO: enable caching in this method
+func (rc *RegistryClient) ChainNameForChainID(ctx context.Context, chainID string) (string, error) {
+	// Get all chain names
+	url := "https://cosmos-chain.directory/chains"
+	bytes, err := rc.makeRequest(ctx, url)
+	if err != nil {
+		return "", err
+	}
+
+	chainNames, err := parseAllChainsResponse(bytes)
+	if err != nil {
+		return "", err
+	}
+
+	// For each chain name, cache the chain id
+	for _, chainName := range chainNames {
+		// Fetch the chain ID for the chain
+		chainInfo, err := rc.GetChainInfo(ctx, chainName)
+		if err != nil {
+			return "", err
+		}
+
+		if strings.EqualFold(chainInfo.ChainID, chainID) {
+			return chainName, nil
+		}
+	}
+
+	return "", fmt.Errorf("could not find chain name for chain ID: %s", chainID)
 }
 
 // Internal method without retries

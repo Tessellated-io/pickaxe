@@ -123,3 +123,12 @@ func parseChainResponse(responseBytes []byte) (*ChainInfo, error) {
 	}
 	return &chainInfo, nil
 }
+
+func parseAllChainsResponse(responseBytes []byte) ([]string, error) {
+	var chainNames []string
+	err := json.Unmarshal(responseBytes, &chainNames)
+	if err != nil {
+		return nil, err
+	}
+	return chainNames, nil
+}
