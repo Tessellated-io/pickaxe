@@ -47,8 +47,24 @@ func (rc *RegistryClient) GetChainInfo(ctx context.Context, chainName string) (*
 }
 
 // TODO: Add retries
-// TODO: enable caching in this method
 func (rc *RegistryClient) ChainNameForChainID(ctx context.Context, chainID string) (string, error) {
+	// Fetch and return if in cache
+	chainName, err := rc.chainNameForChainID(ctx, chainID, false)
+	if err == nil {
+		return chainName, nil
+	}
+
+	// Otherwise, if there was no chain found, try again, breaking the cache.
+	if err == ErrNoChainFoundForChainID {
+		return rc.chainNameForChainID(ctx, chainID, true)
+	} else {
+		return "", err
+	}
+}
+
+// TODO: use cache param
+// TODO: enable caching in this method
+func (rc *RegistryClient) chainNameForChainID(ctx context.Context, chainID string, refreshCache bool) (string, error) {
 	// Get all chain names
 	url := "https://cosmos-chain.directory/chains"
 	bytes, err := rc.makeRequest(ctx, url)
@@ -74,7 +90,7 @@ func (rc *RegistryClient) ChainNameForChainID(ctx context.Context, chainID strin
 		}
 	}
 
-	return "", fmt.Errorf("could not find chain name for chain ID: %s", chainID)
+	return "", ErrNoChainFoundForChainID
 }
 
 // Internal method without retries
