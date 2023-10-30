@@ -56,8 +56,19 @@ func (rc *RegistryClient) GetChainInfo(ctx context.Context, chainName string) (*
 
 // TODO: Add retries
 func (rc *RegistryClient) ChainNameForChainID(ctx context.Context, chainID string) (string, error) {
-	// Fetch and return if in cache
-	chainName, err := rc.chainNameForChainID(ctx, chainID, false)
+	var chainName string
+	var err error
+
+	// Fetch chain ID with caching enabled
+	err = retry.Do(func() error {
+		chainName, err = rc.chainNameForChainID(ctx, chainID, false)
+		return err
+	}, rc.delay, rc.attempts, retry.Context(ctx))
+	if err != nil {
+		err = errors.Unwrap(err)
+	}
+
+	// If no error, return the chain ID
 	if err == nil {
 		return chainName, nil
 	}
@@ -70,8 +81,6 @@ func (rc *RegistryClient) ChainNameForChainID(ctx context.Context, chainID strin
 	}
 }
 
-// TODO: use cache param
-// TODO: enable caching in this method
 func (rc *RegistryClient) chainNameForChainID(ctx context.Context, targetChainID string, refreshCache bool) (string, error) {
 	// If refresh cache is requested, clear the local values
 	if refreshCache {
