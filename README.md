@@ -1,5 +1,5 @@
 <div align="center">
-<p style="font-size:24px; font-weight: bold;">Router</p>
+<p style="font-size:24px; font-weight: bold;">Pickaxe</p>
 <p>
       <img alt="Tessellated Logo" src="media/tessellated-logo.png" />
 <small>Software by <a href="https://tessellated.io" target="_blank"> Tessellated // tessellated.io</a></small>
