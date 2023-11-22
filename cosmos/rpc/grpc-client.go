@@ -2,13 +2,10 @@ package rpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"math"
 	"strings"
-	"time"
 
-	retry "github.com/avast/retry-go/v4"
 	"github.com/tessellated-io/pickaxe/arrays"
 	"github.com/tessellated-io/pickaxe/cosmos/util"
 	"github.com/tessellated-io/pickaxe/grpc"
@@ -41,9 +38,6 @@ type grpcClient struct {
 	stakingClient      stakingtypes.QueryClient
 	txClient           txtypes.ServiceClient
 
-	attempts retry.Option
-	delay    retry.Option
-
 	log *log.Logger
 }
 
@@ -57,7 +51,7 @@ type paginatedRpcResponse[dataType any] struct {
 var _ RpcClient = (*grpcClient)(nil)
 
 // NewRpcClient makes a new RpcClient for the Restake Go App.
-func NewGRpcClient(nodeGrpcUri string, cdc *codec.ProtoCodec, log *log.Logger) (RpcClient, error) {
+func NewGrpcClient(nodeGrpcUri string, cdc *codec.ProtoCodec, log *log.Logger) (RpcClient, error) {
 	conn, err := grpc.GetGrpcConnection(nodeGrpcUri)
 	if err != nil {
 		log.Error().Str("grpc url", nodeGrpcUri).Err(err).Msg("Unable to connect to gRPC")
@@ -81,30 +75,11 @@ func NewGRpcClient(nodeGrpcUri string, cdc *codec.ProtoCodec, log *log.Logger) (
 		stakingClient:      stakingClient,
 		txClient:           txClient,
 
-		attempts: retry.Attempts(5),
-		delay:    retry.Delay(1 * time.Second),
-
 		log: log,
 	}, nil
 }
 
 func (r *grpcClient) GetBalance(ctx context.Context, address, denom string) (*sdk.Coin, error) {
-	var balance *sdk.Coin
-	var err error
-
-	err = retry.Do(func() error {
-		balance, err = r.getBalance(ctx, address, denom)
-		return err
-	}, r.delay, r.attempts, retry.Context(ctx))
-	if err != nil {
-		err = errors.Unwrap(err)
-	}
-
-	return balance, err
-}
-
-// private function with retries
-func (r *grpcClient) getBalance(ctx context.Context, address, denom string) (*sdk.Coin, error) {
 	getBalancesFunc := func(ctx context.Context, pageKey []byte) (*paginatedRpcResponse[sdk.Coin], error) {
 		pagination := &query.PageRequest{
 			Key:   pageKey,
@@ -137,22 +112,6 @@ func (r *grpcClient) getBalance(ctx context.Context, address, denom string) (*sd
 }
 
 func (r *grpcClient) GetPendingRewards(ctx context.Context, delegator, validator, stakingDenom string) (sdk.Dec, error) {
-	var chainInfo sdk.Dec
-	var err error
-
-	err = retry.Do(func() error {
-		chainInfo, err = r.getPendingRewards(ctx, delegator, validator, stakingDenom)
-		return err
-	}, r.delay, r.attempts, retry.Context(ctx))
-	if err != nil {
-		err = errors.Unwrap(err)
-	}
-
-	return chainInfo, err
-}
-
-// private function with retries
-func (r *grpcClient) getPendingRewards(ctx context.Context, delegator, validator, stakingDenom string) (sdk.Dec, error) {
 	request := &distributiontypes.QueryDelegationTotalRewardsRequest{
 		DelegatorAddress: delegator,
 	}
@@ -218,22 +177,6 @@ func (r *grpcClient) getTxStatus(ctx context.Context, txHash string) (*txtypes.G
 }
 
 func (r *grpcClient) GetAccountData(ctx context.Context, address string) (*AccountData, error) {
-	var accountData *AccountData
-	var err error
-
-	err = retry.Do(func() error {
-		accountData, err = r.getAccountData(ctx, address)
-		return err
-	}, r.delay, r.attempts, retry.Context(ctx))
-	if err != nil {
-		err = errors.Unwrap(err)
-	}
-
-	return accountData, err
-}
-
-// private function without retries
-func (r *grpcClient) getAccountData(ctx context.Context, address string) (*AccountData, error) {
 	// Make a query
 	query := &authtypes.QueryAccountRequest{Address: address}
 	res, err := r.authClient.Account(
@@ -263,27 +206,6 @@ func (r *grpcClient) SimulateTx(
 	txConfig client.TxConfig,
 	gasFactor float64,
 ) (*SimulationResult, error) {
-	var simulationResult *SimulationResult
-	var err error
-
-	err = retry.Do(func() error {
-		simulationResult, err = r.simulateTx(ctx, tx, txConfig, gasFactor)
-		return err
-	}, r.delay, r.attempts, retry.Context(ctx))
-	if err != nil {
-		err = errors.Unwrap(err)
-	}
-
-	return simulationResult, err
-}
-
-// private function without retries
-func (r *grpcClient) simulateTx(
-	ctx context.Context,
-	tx authsigning.Tx,
-	txConfig client.TxConfig,
-	gasFactor float64,
-) (*SimulationResult, error) {
 	// Form a query
 	encoder := txConfig.TxEncoder()
 	txBytes, err := encoder(tx)
@@ -305,22 +227,6 @@ func (r *grpcClient) simulateTx(
 }
 
 func (r *grpcClient) GetGrants(ctx context.Context, botAddress string) ([]*authztypes.GrantAuthorization, error) {
-	var grants []*authztypes.GrantAuthorization
-	var err error
-
-	err = retry.Do(func() error {
-		grants, err = r.getGrants(ctx, botAddress)
-		return err
-	}, r.delay, r.attempts, retry.Context(ctx))
-	if err != nil {
-		err = errors.Unwrap(err)
-	}
-
-	return grants, err
-}
-
-// private function without retries
-func (r *grpcClient) getGrants(ctx context.Context, botAddress string) ([]*authztypes.GrantAuthorization, error) {
 	getGrantsFunc := func(ctx context.Context, pageKey []byte) (*paginatedRpcResponse[*authztypes.GrantAuthorization], error) {
 		pagination := &query.PageRequest{
 			Key:   pageKey,
@@ -353,21 +259,6 @@ func (r *grpcClient) getGrants(ctx context.Context, botAddress string) ([]*authz
 }
 
 func (r *grpcClient) GetDelegators(ctx context.Context, validatorAddress string) ([]string, error) {
-	var delegators []string
-	var err error
-
-	err = retry.Do(func() error {
-		delegators, err = r.getDelegators(ctx, validatorAddress)
-		return err
-	}, r.delay, r.attempts, retry.Context(ctx))
-	if err != nil {
-		err = errors.Unwrap(err)
-	}
-
-	return delegators, err
-}
-
-func (r *grpcClient) getDelegators(ctx context.Context, validatorAddress string) ([]string, error) {
 	transformFunc := func(input stakingtypes.DelegationResponse) string { return input.Delegation.DelegatorAddress }
 
 	fetchDelegatorPageFunc := func(ctx context.Context, pageKey []byte) (*paginatedRpcResponse[string], error) {
@@ -414,24 +305,12 @@ func retrievePaginatedData[DataType any](
 ) ([]DataType, error) {
 	// Running list of data
 	data := []DataType{}
-	var err error
 
 	// Loop through all pages
 	var nextKey []byte
 	for {
 		// Query the page, retrying and then giving up if we exceed attempts
-		var rpcResponse *paginatedRpcResponse[DataType]
-		err = retry.Do(func() error {
-			rpcResponse, err = retrievePageFn(ctx, nextKey)
-			if err != nil {
-				return err
-			}
-			return nil
-		}, r.delay, r.attempts, retry.Context(ctx))
-		if err != nil {
-			err = errors.Unwrap(err)
-		}
-
+		rpcResponse, err := retrievePageFn(ctx, nextKey)
 		if err != nil {
 			return nil, err
 		}
