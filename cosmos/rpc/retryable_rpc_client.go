@@ -51,6 +51,7 @@ func (r *retryableRpcClient) Broadcast(ctx context.Context, txBytes []byte) (*tx
 
 	return result, err
 }
+
 func (r *retryableRpcClient) CheckConfirmed(ctx context.Context, txHash string) error {
 	var err error
 
@@ -66,7 +67,6 @@ func (r *retryableRpcClient) CheckConfirmed(ctx context.Context, txHash string) 
 }
 
 func (r *retryableRpcClient) SimulateTx(ctx context.Context, tx authsigning.Tx, txConfig client.TxConfig, gasFactor float64) (*SimulationResult, error) {
-
 	var result *SimulationResult
 	var err error
 
@@ -79,7 +79,6 @@ func (r *retryableRpcClient) SimulateTx(ctx context.Context, tx authsigning.Tx, 
 	}
 
 	return result, err
-
 }
 
 func (r *retryableRpcClient) GetAccountData(ctx context.Context, address string) (*AccountData, error) {
@@ -126,6 +125,7 @@ func (r *retryableRpcClient) GetDelegators(ctx context.Context, validatorAddress
 
 	return result, err
 }
+
 func (r *retryableRpcClient) GetGrants(ctx context.Context, address string) ([]*authztypes.GrantAuthorization, error) {
 	var result []*authztypes.GrantAuthorization
 	var err error
