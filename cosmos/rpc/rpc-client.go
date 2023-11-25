@@ -3,10 +3,8 @@ package rpc
 import (
 	"context"
 
-	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
-	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authztypes "github.com/cosmos/cosmos-sdk/x/authz"
 )
 
@@ -16,7 +14,6 @@ type RpcClient interface {
 	CheckConfirmed(ctx context.Context, txHash string) error
 
 	Simulate(ctx context.Context, txBytes []byte) (*txtypes.SimulateResponse, error)
-	SimulateTx(ctx context.Context, tx authsigning.Tx, txConfig client.TxConfig, gasFactor float64) (*SimulationResult, error)
 
 	GetAccountData(ctx context.Context, address string) (*AccountData, error)
 	GetBalance(ctx context.Context, address, denom string) (*sdk.Coin, error)

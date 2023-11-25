@@ -2,6 +2,7 @@ package tx
 
 import (
 	"context"
+	"math"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
@@ -49,9 +50,12 @@ func (sm *simulationManager) SimulateTx(ctx context.Context, tx authsigning.Tx) 
 }
 
 func (sm *simulationManager) SimulateTxBytes(ctx context.Context, txBytes []byte) (*SimulationResult, error) {
-	simulationResult, err := sm.rpcClient.Simulate(ctx, txBytes)
+	simulationResponse, err := sm.rpcClient.Simulate(ctx, txBytes)
 	if err != nil {
 		return nil, err
 	}
 
+	return &SimulationResult{
+		GasRecommendation: uint64(math.Ceil(float64(simulationResponse.GasInfo.GasUsed) * sm.gasFactor)),
+	}, nil
 }
