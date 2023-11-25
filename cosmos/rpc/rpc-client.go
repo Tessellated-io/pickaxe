@@ -15,6 +15,7 @@ type RpcClient interface {
 	Broadcast(ctx context.Context, txBytes []byte) (*txtypes.BroadcastTxResponse, error)
 	CheckConfirmed(ctx context.Context, txHash string) error
 
+	Simulate(ctx context.Context, txBytes []byte) (*txtypes.SimulateResponse, error)
 	SimulateTx(ctx context.Context, tx authsigning.Tx, txConfig client.TxConfig, gasFactor float64) (*SimulationResult, error)
 
 	GetAccountData(ctx context.Context, address string) (*AccountData, error)
