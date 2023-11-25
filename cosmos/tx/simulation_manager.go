@@ -10,11 +10,15 @@ import (
 
 // SimulationManager manages simulating gas from transactions.
 type SimulationManager interface {
-	SimulateTx(ctx context.Context, tx authsigning.Tx, txConfig client.TxConfig, gasFactor float64) (*SimulationResult, error)
+	SimulateTx(ctx context.Context, tx authsigning.Tx) (*SimulationResult, error)
+	SimulateTxBytes(ctx context.Context, txBytes []byte) (*SimulationResult, error)
 }
 
 // simulationManager is the default implementation
 type simulationManager struct {
+	gasFactor float64
+
+	txConfig  client.TxConfig
 	rpcClient rpc.RpcClient
 }
 
@@ -22,14 +26,32 @@ type simulationManager struct {
 var _ SimulationManager = (*simulationManager)(nil)
 
 // NewSimulationManager makes a new default simulationManager
-func NewSimulationManager(rpcClient rpc.RpcClient) (SimulationManager, error) {
+func NewSimulationManager(gasFactor float64, rpcClient rpc.RpcClient, txConfig client.TxConfig) (SimulationManager, error) {
 	return &simulationManager{
+		gasFactor: gasFactor,
+
+		txConfig:  txConfig,
 		rpcClient: rpcClient,
 	}, nil
 }
 
 // Simulation Managar interface
 
-func (sm *simulationManager) SimulateTx(ctx context.Context, tx authsigning.Tx, txConfig client.TxConfig, gasFactor float64) (*SimulationResult, error) {
-	
+func (sm *simulationManager) SimulateTx(ctx context.Context, tx authsigning.Tx) (*SimulationResult, error) {
+	// Form transaction bytes
+	encoder := sm.txConfig.TxEncoder()
+	txBytes, err := encoder(tx)
+	if err != nil {
+		return nil, err
+	}
+
+	return sm.SimulateTxBytes(ctx, txBytes)
+}
+
+func (sm *simulationManager) SimulateTxBytes(ctx context.Context, txBytes []byte) (*SimulationResult, error) {
+	simulationResult, err := sm.rpcClient.Simulate(ctx, txBytes)
+	if err != nil {
+		return nil, err
+	}
+
 }
