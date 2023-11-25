@@ -200,6 +200,22 @@ func (r *grpcClient) GetAccountData(ctx context.Context, address string) (*Accou
 	}, nil
 }
 
+func (r *grpcClient) Simulate(
+	ctx context.Context,
+	txBytes []byte,
+) (*txtypes.SimulateResponse, error) {
+	// Form a query
+	query := &txtypes.SimulateRequest{
+		TxBytes: txBytes,
+	}
+	simulationResponse, err := r.txClient.Simulate(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return simulationResponse, nil
+}
+
 func (r *grpcClient) SimulateTx(
 	ctx context.Context,
 	tx authsigning.Tx,

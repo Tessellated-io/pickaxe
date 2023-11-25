@@ -66,6 +66,21 @@ func (r *retryableRpcClient) CheckConfirmed(ctx context.Context, txHash string) 
 	return err
 }
 
+func (r *retryableRpcClient) Simulate(ctx context.Context, txBytes []byte) (*txtypes.SimulateResponse, error) {
+	var result *txtypes.SimulateResponse
+	var err error
+
+	err = retry.Do(func() error {
+		result, err = r.wrappedClient.Simulate(ctx, txBytes)
+		return err
+	}, r.delay, r.attempts, retry.Context(ctx))
+	if err != nil {
+		err = errors.Unwrap(err)
+	}
+
+	return result, err
+}
+
 func (r *retryableRpcClient) SimulateTx(ctx context.Context, tx authsigning.Tx, txConfig client.TxConfig, gasFactor float64) (*SimulationResult, error) {
 	var result *SimulationResult
 	var err error
