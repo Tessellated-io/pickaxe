@@ -37,7 +37,7 @@ func NewChainRegistryClient(log *log.Logger) *chainRegistryClient {
 
 // ChainRegistryClient interface
 
-func (rc *chainRegistryClient) GetChainInfo(ctx context.Context, chainName string) (*ChainInfo, error) {
+func (rc *chainRegistryClient) ChainInfo(ctx context.Context, chainName string) (*ChainInfo, error) {
 	url := fmt.Sprintf("https://proxy.atomscan.com/directory/%s/chain.json", chainName)
 	bytes, err := rc.makeRequest(ctx, url)
 	if err != nil {
@@ -82,7 +82,7 @@ func (rc *chainRegistryClient) ChainNameForChainID(ctx context.Context, targetCh
 		if !isSet {
 			// Fetch the chain ID for the chain
 			// NOTE: No retries because GetChainInfo manages that for us.
-			chainInfo, err := rc.GetChainInfo(ctx, chainName)
+			chainInfo, err := rc.ChainInfo(ctx, chainName)
 			if err != nil {
 				return "", err
 			}
