@@ -114,6 +114,34 @@ func (rc *chainRegistryClient) AllChainNames(ctx context.Context) ([]string, err
 	return chainNames, nil
 }
 
+func (rc *chainRegistryClient) Validator(ctx context.Context, targetValidator string) (*Validator, error) {
+	validators, err := rc.Validators(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	validator, err := rc.extractValidator(targetValidator, validators)
+	if err != nil {
+		return nil, err
+	}
+	return validator, nil
+}
+
+func (rc *chainRegistryClient) Validators(ctx context.Context) ([]Validator, error) {
+	bytes, err := rc.makeRequest(ctx, "https://validators.cosmos.directory/")
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := parseValidatorRegistryResponse(bytes)
+	if err != nil {
+		return nil, err
+	}
+	return response.Validators, nil
+}
+
+// Private helpers
+
 func (rc *chainRegistryClient) makeRequest(ctx context.Context, url string) ([]byte, error) {
 	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -136,4 +164,13 @@ func (rc *chainRegistryClient) makeRequest(ctx context.Context, url string) ([]b
 	} else {
 		return nil, fmt.Errorf("received non-OK HTTP status: %d", resp.StatusCode)
 	}
+}
+
+func (rc *chainRegistryClient) extractValidator(targetValidator string, validators []Validator) (*Validator, error) {
+	for _, validator := range validators {
+		if strings.EqualFold(targetValidator, validator.Name) {
+			return &validator, nil
+		}
+	}
+	return nil, fmt.Errorf("unable to find a validator with name \"%s\"", targetValidator)
 }
