@@ -75,3 +75,18 @@ func (r *retryableChainRegistryClient) ChainInfo(ctx context.Context, chainName 
 
 	return result, err
 }
+
+func (r *retryableChainRegistryClient) Validator(ctx context.Context, targetValidator string) (*Validator, error) {
+	var result *Validator
+	var err error
+
+	err = retry.Do(func() error {
+		result, err = r.wrappedClient.Validator(ctx, targetValidator)
+		return err
+	}, r.delay, r.attempts, retry.Context(ctx))
+	if err != nil {
+		err = errors.Unwrap(err)
+	}
+
+	return result, err
+}
