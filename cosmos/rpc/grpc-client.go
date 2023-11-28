@@ -173,7 +173,7 @@ func (r *grpcClient) getTxStatus(ctx context.Context, txHash string) (*txtypes.G
 	return r.txClient.GetTx(ctx, request)
 }
 
-func (r *grpcClient) GetAccountData(ctx context.Context, address string) (*AccountData, error) {
+func (r *grpcClient) Account(ctx context.Context, address string) (authtypes.AccountI, error) {
 	// Make a query
 	query := &authtypes.QueryAccountRequest{Address: address}
 	res, err := r.authClient.Account(
@@ -190,11 +190,7 @@ func (r *grpcClient) GetAccountData(ctx context.Context, address string) (*Accou
 		return nil, err
 	}
 
-	return &AccountData{
-		Address:       address,
-		AccountNumber: account.GetAccountNumber(),
-		Sequence:      account.GetSequence(),
-	}, nil
+	return account, nil
 }
 
 func (r *grpcClient) Simulate(
