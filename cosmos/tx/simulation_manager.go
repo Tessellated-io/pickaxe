@@ -4,9 +4,10 @@ import (
 	"context"
 	"math"
 
+	"github.com/tessellated-io/pickaxe/cosmos/rpc"
+
 	"github.com/cosmos/cosmos-sdk/client"
 	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
-	"github.com/tessellated-io/pickaxe/cosmos/rpc"
 )
 
 // SimulationManager manages simulating gas from transactions.
