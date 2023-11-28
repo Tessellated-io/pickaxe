@@ -9,6 +9,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
+	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	authztypes "github.com/cosmos/cosmos-sdk/x/authz"
 )
 
@@ -79,12 +80,12 @@ func (r *retryableRpcClient) Simulate(ctx context.Context, txBytes []byte) (*txt
 	return result, err
 }
 
-func (r *retryableRpcClient) GetAccountData(ctx context.Context, address string) (*AccountData, error) {
-	var result *AccountData
+func (r *retryableRpcClient) Account(ctx context.Context, address string) (authtypes.AccountI, error) {
+	var result authtypes.AccountI
 	var err error
 
 	err = retry.Do(func() error {
-		result, err = r.wrappedClient.GetAccountData(ctx, address)
+		result, err = r.wrappedClient.Account(ctx, address)
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
 	if err != nil {
