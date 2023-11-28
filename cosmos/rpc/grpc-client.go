@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/tessellated-io/pickaxe/arrays"
@@ -11,12 +10,10 @@ import (
 	"github.com/tessellated-io/pickaxe/grpc"
 	"github.com/tessellated-io/pickaxe/log"
 
-	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
-	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	authztypes "github.com/cosmos/cosmos-sdk/x/authz"
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
@@ -214,32 +211,6 @@ func (r *grpcClient) Simulate(
 	}
 
 	return simulationResponse, nil
-}
-
-func (r *grpcClient) SimulateTx(
-	ctx context.Context,
-	tx authsigning.Tx,
-	txConfig client.TxConfig,
-	gasFactor float64,
-) (*SimulationResult, error) {
-	// Form a query
-	encoder := txConfig.TxEncoder()
-	txBytes, err := encoder(tx)
-	if err != nil {
-		return nil, err
-	}
-
-	query := &txtypes.SimulateRequest{
-		TxBytes: txBytes,
-	}
-	simulationResponse, err := r.txClient.Simulate(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-
-	return &SimulationResult{
-		GasRecommendation: uint64(math.Ceil(float64(simulationResponse.GasInfo.GasUsed) * gasFactor)),
-	}, nil
 }
 
 func (r *grpcClient) GetGrants(ctx context.Context, botAddress string) ([]*authztypes.GrantAuthorization, error) {

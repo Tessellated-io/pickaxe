@@ -7,10 +7,8 @@ import (
 
 	retry "github.com/avast/retry-go/v4"
 
-	"github.com/cosmos/cosmos-sdk/client"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
-	authsigning "github.com/cosmos/cosmos-sdk/x/auth/signing"
 	authztypes "github.com/cosmos/cosmos-sdk/x/authz"
 )
 
@@ -72,21 +70,6 @@ func (r *retryableRpcClient) Simulate(ctx context.Context, txBytes []byte) (*txt
 
 	err = retry.Do(func() error {
 		result, err = r.wrappedClient.Simulate(ctx, txBytes)
-		return err
-	}, r.delay, r.attempts, retry.Context(ctx))
-	if err != nil {
-		err = errors.Unwrap(err)
-	}
-
-	return result, err
-}
-
-func (r *retryableRpcClient) SimulateTx(ctx context.Context, tx authsigning.Tx, txConfig client.TxConfig, gasFactor float64) (*SimulationResult, error) {
-	var result *SimulationResult
-	var err error
-
-	err = retry.Do(func() error {
-		result, err = r.wrappedClient.SimulateTx(ctx, tx, txConfig, gasFactor)
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
 	if err != nil {

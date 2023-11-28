@@ -5,7 +5,3 @@ type AccountData struct {
 	AccountNumber uint64
 	Sequence      uint64
 }
-
-type SimulationResult struct {
-	GasRecommendation uint64
-}
