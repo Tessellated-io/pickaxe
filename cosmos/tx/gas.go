@@ -7,9 +7,10 @@ import (
 	"strconv"
 	"sync"
 
-	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	chainregistry "github.com/tessellated-io/pickaxe/cosmos/chain-registry"
 	"github.com/tessellated-io/pickaxe/log"
+
+	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 )
 
 // GasManager interprets tx results and associated outcomes.
