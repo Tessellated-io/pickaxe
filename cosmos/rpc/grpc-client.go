@@ -132,7 +132,6 @@ func (r *grpcClient) GetPendingRewards(ctx context.Context, delegator, validator
 	return sdk.NewDec(0), nil
 }
 
-// Broadcast may or may not be populated in the response.
 func (r *grpcClient) Broadcast(
 	ctx context.Context,
 	txBytes []byte,
