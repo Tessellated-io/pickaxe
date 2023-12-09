@@ -208,6 +208,18 @@ func (r *grpcClient) Simulate(
 	return simulationResponse, nil
 }
 
+func (r *grpcClient) GetDenomMetadata(ctx context.Context, denom string) (*banktypes.Metadata, error) {
+	query := &banktypes.QueryDenomMetadataRequest{
+		Denom: denom,
+	}
+	response, err := r.bankClient.DenomMetadata(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+
+	return &response.Metadata, nil
+}
+
 func (r *grpcClient) GetGrants(ctx context.Context, botAddress string) ([]*authztypes.GrantAuthorization, error) {
 	getGrantsFunc := func(ctx context.Context, pageKey []byte) (*paginatedRpcResponse[*authztypes.GrantAuthorization], error) {
 		pagination := &query.PageRequest{

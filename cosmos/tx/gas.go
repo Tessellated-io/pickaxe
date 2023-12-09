@@ -69,11 +69,10 @@ func (gm *defaultGasManager) GetGasPrice(ctx context.Context, chainName string) 
 	if err != nil {
 		return 0, err
 	}
-	feeTokens := chainInfo.Fees.FeeTokens
-	if len(feeTokens) == 0 {
-		return 0, fmt.Errorf("no fee tokens found for chain in registry: %s", chainName)
+	gasPrice, err = chainInfo.MinGasFee()
+	if err != nil {
+		return 0, err
 	}
-	gasPrice = feeTokens[0].LowGasPrice
 
 	// Set it for the next run
 	err = gm.gasProvider.SetGasPrice(chainName, gasPrice)
