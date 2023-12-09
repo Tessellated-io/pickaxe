@@ -11,6 +11,7 @@ import (
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	authztypes "github.com/cosmos/cosmos-sdk/x/authz"
+	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
 // Implements retryable rpcs and returns the last error
@@ -101,6 +102,21 @@ func (r *retryableRpcClient) GetBalance(ctx context.Context, address, denom stri
 
 	err = retry.Do(func() error {
 		result, err = r.wrappedClient.GetBalance(ctx, address, denom)
+		return err
+	}, r.delay, r.attempts, retry.Context(ctx))
+	if err != nil {
+		err = errors.Unwrap(err)
+	}
+
+	return result, err
+}
+
+func (r *retryableRpcClient) GetDenomMetadata(ctx context.Context, denom string) (*banktypes.Metadata, error) {
+	var result *banktypes.Metadata
+	var err error
+
+	err = retry.Do(func() error {
+		result, err = r.wrappedClient.GetDenomMetadata(ctx, denom)
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
 	if err != nil {

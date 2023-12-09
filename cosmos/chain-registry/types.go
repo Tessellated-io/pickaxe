@@ -116,16 +116,6 @@ type ChainInfo struct {
 	Explorers    []Explorer `json:"explorers"`
 }
 
-func parseChainResponse(responseBytes []byte) (*ChainInfo, error) {
-	// Unmarshal the JSON data into the ChainInfo struct
-	var chainInfo ChainInfo
-	err := json.Unmarshal(responseBytes, &chainInfo)
-	if err != nil {
-		return nil, err
-	}
-	return &chainInfo, nil
-}
-
 func parseAllChainsResponse(responseBytes []byte) ([]string, error) {
 	var chainNames []string
 	err := json.Unmarshal(responseBytes, &chainNames)
