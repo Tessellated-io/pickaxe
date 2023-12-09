@@ -29,7 +29,7 @@ type defaultGasManager struct {
 	priceIncrement float64
 
 	consecutiveSuccesses map[string]int
-	lock                 *sync.RWMutex
+	lock                 *sync.Mutex
 
 	chainRegistryClient chainregistry.ChainRegistryClient
 	gasProvider         GasProvider
@@ -45,7 +45,7 @@ func NewDefaultGasManager(priceIncrement float64, gasProvider GasProvider, logge
 		priceIncrement: priceIncrement,
 
 		consecutiveSuccesses: make(map[string]int),
-		lock:                 &sync.RWMutex{},
+		lock:                 &sync.Mutex{},
 
 		gasProvider: gasProvider,
 		logger:      gasLogger,
@@ -187,6 +187,9 @@ func (gm *defaultGasManager) extractMinGlobalFee(errMsg string) (float64, error)
 
 // Management functions for tracking consecutive successes
 func (gm *defaultGasManager) trackSuccess(ctx context.Context, chainName string) {
+	gm.lock.Lock()
+	defer gm.lock.Unlock()
+
 	// Increment
 	oldValue := gm.consecutiveSuccesses[chainName]
 	newValue := oldValue + 1
@@ -222,6 +225,9 @@ func (gm *defaultGasManager) trackSuccess(ctx context.Context, chainName string)
 }
 
 func (gm *defaultGasManager) trackFailure(chainName string) {
+	gm.lock.Lock()
+	defer gm.lock.Unlock()
+
 	gm.consecutiveSuccesses[chainName] = 0
 }
 
@@ -235,7 +241,7 @@ type GasProvider interface {
 type InMemoryGasProvider struct {
 	prices map[string]float64
 
-	lock *sync.RWMutex
+	lock *sync.Mutex
 }
 
 var _ GasProvider = (*InMemoryGasProvider)(nil)
@@ -244,12 +250,15 @@ func NewInMemoryGasProvider() (GasProvider, error) {
 	provider := &InMemoryGasProvider{
 		prices: make(map[string]float64),
 
-		lock: &sync.RWMutex{},
+		lock: &sync.Mutex{},
 	}
 	return provider, nil
 }
 
 func (gp *InMemoryGasProvider) GetGasPrice(chainName string) (float64, error) {
+	gp.lock.Lock()
+	defer gp.lock.Unlock()
+
 	gasPrice, found := gp.prices[chainName]
 	if !found {
 		return 0, ErrNoGasPrice
@@ -259,6 +268,9 @@ func (gp *InMemoryGasProvider) GetGasPrice(chainName string) (float64, error) {
 }
 
 func (gp *InMemoryGasProvider) SetGasPrice(chainName string, gasPrice float64) error {
+	gp.lock.Lock()
+	defer gp.lock.Unlock()
+
 	gp.prices[chainName] = gasPrice
 	return nil
 }
