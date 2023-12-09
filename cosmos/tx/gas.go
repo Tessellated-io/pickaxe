@@ -28,6 +28,9 @@ type GasManager interface {
 type defaultGasManager struct {
 	priceIncrement float64
 
+	consecutiveSuccesses map[string]int
+	lock                 *sync.RWMutex
+
 	chainRegistryClient chainregistry.ChainRegistryClient
 	gasProvider         GasProvider
 	logger              *log.Logger
@@ -40,6 +43,9 @@ func NewDefaultGasManager(priceIncrement float64, gasProvider GasProvider, logge
 
 	gasManager := &defaultGasManager{
 		priceIncrement: priceIncrement,
+
+		consecutiveSuccesses: make(map[string]int),
+		lock:                 &sync.RWMutex{},
 
 		gasProvider: gasProvider,
 		logger:      gasLogger,
@@ -85,6 +91,7 @@ func (gm *defaultGasManager) ManageBroadcastResult(ctx context.Context, chainNam
 
 	// If code is 0 (success) then do nothing
 	if code == 0 {
+		gm.trackSuccess(ctx, chainName)
 		return nil
 	}
 
@@ -123,6 +130,8 @@ func (gm *defaultGasManager) ManageBroadcastResult(ctx context.Context, chainNam
 			}
 			gm.logger.Info().Str("chain_name", chainName).Float64("old_gas_price", oldPrice).Float64("new_gas_price", newPrice).Msg("updated gas price due to transaction broadcast")
 		}
+
+		gm.trackFailure(chainName)
 		return nil
 	}
 
@@ -135,8 +144,10 @@ func (gm *defaultGasManager) ManageBroadcastResult(ctx context.Context, chainNam
 func (gm *defaultGasManager) ManageConfirmedTx(ctx context.Context, chainName string, confirmed bool) error {
 	// Don't process further if it confirmed successfully.
 	if confirmed {
+		gm.trackSuccess(ctx, chainName)
 		return nil
 	}
+	gm.trackFailure(chainName)
 
 	// Get the old gas price
 	oldPrice, err := gm.GetGasPrice(ctx, chainName)
@@ -172,6 +183,46 @@ func (gm *defaultGasManager) extractMinGlobalFee(errMsg string) (float64, error)
 
 	}
 	return 0, fmt.Errorf("unrecognized error format")
+}
+
+// Management functions for tracking consecutive successes
+func (gm *defaultGasManager) trackSuccess(ctx context.Context, chainName string) {
+	// Increment
+	oldValue := gm.consecutiveSuccesses[chainName]
+	newValue := oldValue + 1
+
+	// Update the value
+	gm.consecutiveSuccesses[chainName] = newValue
+
+	// Try to jitter the gas down.
+	consecutiveSuccessThreshold := 3
+	if newValue >= consecutiveSuccessThreshold {
+		// Get the old gas price
+		oldPrice, err := gm.GetGasPrice(ctx, chainName)
+		if err != nil {
+			gm.logger.Error().Err(err).Str("chain_name", chainName).Int("consecutive_successes", newValue).Msg("attempted to decrement gas but failed to fetch old price")
+			return
+		}
+
+		// Decrement price, bounding for zero
+		newPrice := oldPrice - gm.priceIncrement
+		if newPrice < 0 {
+			newPrice = 0
+		}
+
+		// Set and log
+		err = gm.gasProvider.SetGasPrice(chainName, newPrice)
+		if err != nil {
+			gm.logger.Error().Err(err).Str("chain_name", chainName).Int("consecutive_successes", newValue).Msg("attempted to decrement gas but failed to setnew price")
+			return
+		}
+		gm.logger.Info().Str("chain_name", chainName).Float64("old_gas_price", oldPrice).Int("consecutive_successes", newValue).Float64("new_gas_price", newPrice).Msg("decremented gas price because of consecutive successes")
+
+	}
+}
+
+func (gm *defaultGasManager) trackFailure(chainName string) {
+	gm.consecutiveSuccesses[chainName] = 0
 }
 
 // GasProvider is a simple KV store for gas.
