@@ -7,16 +7,18 @@ import (
 )
 
 type SigningMetadataProvider struct {
+	chainID string
+
 	rpcClient rpc.RpcClient
 }
 
-func NewSigningMetadataProvider(rpcClient rpc.RpcClient) (*SigningMetadataProvider, error) {
+func NewSigningMetadataProvider(chainID string, rpcClient rpc.RpcClient) (*SigningMetadataProvider, error) {
 	return &SigningMetadataProvider{
 		rpcClient: rpcClient,
 	}, nil
 }
 
-func (sip *SigningMetadataProvider) SigningMetadataForAccount(ctx context.Context, address, chainID string) (*SigningMetadata, error) {
+func (sip *SigningMetadataProvider) SigningMetadataForAccount(ctx context.Context, address string) (*SigningMetadata, error) {
 	account, err := sip.rpcClient.Account(ctx, address)
 	if err != nil {
 		return nil, err
@@ -25,7 +27,7 @@ func (sip *SigningMetadataProvider) SigningMetadataForAccount(ctx context.Contex
 	return &SigningMetadata{
 		address:       address,
 		accountNumber: account.GetAccountNumber(),
-		chainID:       chainID,
+		chainID:       sip.chainID,
 		sequence:      account.GetSequence(),
 	}, nil
 }
