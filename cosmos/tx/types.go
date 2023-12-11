@@ -7,6 +7,7 @@ type SimulationResult struct {
 type SigningMetadata struct {
 	address       string
 	accountNumber uint64
+	chainID       string
 	sequence      uint64
 }
 
@@ -16,6 +17,10 @@ func (sm *SigningMetadata) Address() string {
 
 func (sm *SigningMetadata) AccountNumber() uint64 {
 	return sm.accountNumber
+}
+
+func (sm *SigningMetadata) ChainID() string {
+	return sm.chainID
 }
 
 func (sm *SigningMetadata) Sequence() uint64 {
