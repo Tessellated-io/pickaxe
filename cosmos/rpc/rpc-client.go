@@ -13,7 +13,7 @@ import (
 // Handles RPCs for Restake
 type RpcClient interface {
 	Broadcast(ctx context.Context, txBytes []byte) (*txtypes.BroadcastTxResponse, error)
-	CheckConfirmed(ctx context.Context, txHash string) error
+	CheckIncluded(ctx context.Context, txHash string) (bool, error)
 
 	Simulate(ctx context.Context, txBytes []byte) (*txtypes.SimulateResponse, error)
 

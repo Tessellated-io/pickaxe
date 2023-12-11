@@ -21,7 +21,7 @@ func NewCosmosKeyPairFromMnemonic(mnemonic string) *KeyPair {
 	return newKeyPairFromMnemonic(mnemonic, bip44Path)
 }
 
-// Return a key pair derived from the given mnemonic with
+// Return a key pair derived from the given mnemonic with the given coin type
 func NewKeyPairFromMnemonic(mnemonic string, coinType uint32) *KeyPair {
 	// Futz with the config but reset it so that we don't get confused in future calls
 	config := sdk.GetConfig()

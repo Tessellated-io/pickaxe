@@ -5,7 +5,19 @@ type SimulationResult struct {
 }
 
 type SigningMetadata struct {
-	Address       string
-	AccountNumber uint64
-	Sequence      uint64
+	address       string
+	accountNumber uint64
+	sequence      uint64
+}
+
+func (sm *SigningMetadata) Address() string {
+	return sm.address
+}
+
+func (sm *SigningMetadata) AccountNumber() uint64 {
+	return sm.accountNumber
+}
+
+func (sm *SigningMetadata) Sequence() uint64 {
+	return sm.sequence
 }

@@ -22,7 +22,7 @@ type GasManager interface {
 	ManageBroadcastResult(ctx context.Context, chainName string, broadcastResult *txtypes.BroadcastTxResponse) error
 
 	// Update gas prices on the given chainName with whether or not a transaction confirmed in a given time period.
-	ManageConfirmedTx(ctx context.Context, chainName string, confirmed bool) error
+	ManageInclusionResult(ctx context.Context, chainName string, confirmed bool) error
 }
 
 // defaultGasManager implements a naive gas management scheme.
@@ -33,13 +33,13 @@ type defaultGasManager struct {
 	lock                 *sync.Mutex
 
 	chainRegistryClient chainregistry.ChainRegistryClient
-	gasProvider         GasProvider
+	gasPriceProvider    GasPriceProvider
 	logger              *log.Logger
 }
 
 var _ GasManager = (*defaultGasManager)(nil)
 
-func NewDefaultGasManager(priceIncrement float64, gasProvider GasProvider, logger *log.Logger) (GasManager, error) {
+func NewDefaultGasManager(priceIncrement float64, gasPriceProvider GasPriceProvider, logger *log.Logger) (GasManager, error) {
 	gasLogger := logger.ApplyPrefix("⛽️ ")
 
 	gasManager := &defaultGasManager{
@@ -48,8 +48,8 @@ func NewDefaultGasManager(priceIncrement float64, gasProvider GasProvider, logge
 		consecutiveSuccesses: make(map[string]int),
 		lock:                 &sync.Mutex{},
 
-		gasProvider: gasProvider,
-		logger:      gasLogger,
+		gasPriceProvider: gasPriceProvider,
+		logger:           gasLogger,
 	}
 
 	return gasManager, nil
@@ -57,7 +57,7 @@ func NewDefaultGasManager(priceIncrement float64, gasProvider GasProvider, logge
 
 func (gm *defaultGasManager) GetGasPrice(ctx context.Context, chainName string) (float64, error) {
 	// Attempt to get a gas price, and return if successful.
-	gasPrice, err := gm.gasProvider.GetGasPrice(chainName)
+	gasPrice, err := gm.gasPriceProvider.GetGasPrice(chainName)
 	if err == nil {
 		gm.logger.Info().Str("chain_name", chainName).Float64("gas_price", gasPrice).Msg("got gas price from cache")
 
@@ -75,7 +75,7 @@ func (gm *defaultGasManager) GetGasPrice(ctx context.Context, chainName string) 
 	}
 
 	// Set it for the next run
-	err = gm.gasProvider.SetGasPrice(chainName, gasPrice)
+	err = gm.gasPriceProvider.SetGasPrice(chainName, gasPrice)
 	if err != nil {
 		return 0, err
 	}
@@ -114,7 +114,7 @@ func (gm *defaultGasManager) ManageBroadcastResult(ctx context.Context, chainNam
 			newGasPrice := chainSuggestedFee / float64(gasWanted)
 
 			// Set and log
-			err = gm.gasProvider.SetGasPrice(chainName, newGasPrice)
+			err = gm.gasPriceProvider.SetGasPrice(chainName, newGasPrice)
 			if err != nil {
 				return err
 			}
@@ -124,7 +124,7 @@ func (gm *defaultGasManager) ManageBroadcastResult(ctx context.Context, chainNam
 			newPrice := oldPrice + gm.priceIncrement
 
 			// Set and log
-			err = gm.gasProvider.SetGasPrice(chainName, newPrice)
+			err = gm.gasPriceProvider.SetGasPrice(chainName, newPrice)
 			if err != nil {
 				return err
 			}
@@ -141,7 +141,7 @@ func (gm *defaultGasManager) ManageBroadcastResult(ctx context.Context, chainNam
 }
 
 // In our naive implementation, simply bump the gas price if we didn't get a confirmation.
-func (gm *defaultGasManager) ManageConfirmedTx(ctx context.Context, chainName string, confirmed bool) error {
+func (gm *defaultGasManager) ManageInclusionResult(ctx context.Context, chainName string, confirmed bool) error {
 	// Don't process further if it confirmed successfully.
 	if confirmed {
 		gm.trackSuccess(ctx, chainName)
@@ -157,7 +157,7 @@ func (gm *defaultGasManager) ManageConfirmedTx(ctx context.Context, chainName st
 
 	// Bump price and set
 	newPrice := oldPrice + gm.priceIncrement
-	err = gm.gasProvider.SetGasPrice(chainName, newPrice)
+	err = gm.gasPriceProvider.SetGasPrice(chainName, newPrice)
 	if err != nil {
 		return err
 	}
@@ -214,7 +214,7 @@ func (gm *defaultGasManager) trackSuccess(ctx context.Context, chainName string)
 		}
 
 		// Set and log
-		err = gm.gasProvider.SetGasPrice(chainName, newPrice)
+		err = gm.gasPriceProvider.SetGasPrice(chainName, newPrice)
 		if err != nil {
 			gm.logger.Error().Err(err).Str("chain_name", chainName).Int("consecutive_successes", newValue).Msg("attempted to decrement gas but failed to setnew price")
 			return
@@ -231,23 +231,23 @@ func (gm *defaultGasManager) trackFailure(chainName string) {
 	gm.consecutiveSuccesses[chainName] = 0
 }
 
-// GasProvider is a simple KV store for gas.
-type GasProvider interface {
+// GasPriceProvider is a simple KV store for gas.
+type GasPriceProvider interface {
 	GetGasPrice(chainName string) (float64, error)
 	SetGasPrice(chainName string, gasPrice float64) error
 }
 
-// InMemoryGasProvider stores gas prices in memory.
-type InMemoryGasProvider struct {
+// InMemoryGasPriceProvider stores gas prices in memory.
+type InMemoryGasPriceProvider struct {
 	prices map[string]float64
 
 	lock *sync.Mutex
 }
 
-var _ GasProvider = (*InMemoryGasProvider)(nil)
+var _ GasPriceProvider = (*InMemoryGasPriceProvider)(nil)
 
-func NewInMemoryGasProvider() (GasProvider, error) {
-	provider := &InMemoryGasProvider{
+func NewInMemoryGasProvider() (GasPriceProvider, error) {
+	provider := &InMemoryGasPriceProvider{
 		prices: make(map[string]float64),
 
 		lock: &sync.Mutex{},
@@ -255,7 +255,7 @@ func NewInMemoryGasProvider() (GasProvider, error) {
 	return provider, nil
 }
 
-func (gp *InMemoryGasProvider) GetGasPrice(chainName string) (float64, error) {
+func (gp *InMemoryGasPriceProvider) GetGasPrice(chainName string) (float64, error) {
 	gp.lock.Lock()
 	defer gp.lock.Unlock()
 
@@ -267,7 +267,7 @@ func (gp *InMemoryGasProvider) GetGasPrice(chainName string) (float64, error) {
 	return gasPrice, nil
 }
 
-func (gp *InMemoryGasProvider) SetGasPrice(chainName string, gasPrice float64) error {
+func (gp *InMemoryGasPriceProvider) SetGasPrice(chainName string, gasPrice float64) error {
 	gp.lock.Lock()
 	defer gp.lock.Unlock()
 
