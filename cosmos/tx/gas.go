@@ -246,7 +246,7 @@ type InMemoryGasPriceProvider struct {
 
 var _ GasPriceProvider = (*InMemoryGasPriceProvider)(nil)
 
-func NewInMemoryGasProvider() (GasPriceProvider, error) {
+func NewInMemoryGasPriceProvider() (GasPriceProvider, error) {
 	provider := &InMemoryGasPriceProvider{
 		prices: make(map[string]float64),
 
