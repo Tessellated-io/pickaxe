@@ -6,25 +6,25 @@ import (
 	"github.com/tessellated-io/pickaxe/cosmos/rpc"
 )
 
-type SigningInfoProvider struct {
+type SigningMetadataProvider struct {
 	rpcClient rpc.RpcClient
 }
 
-func NewSigningInfoProvider(rpcClient rpc.RpcClient) (*SigningInfoProvider, error) {
-	return &SigningInfoProvider{
+func NewSigningMetadataProvider(rpcClient rpc.RpcClient) (*SigningMetadataProvider, error) {
+	return &SigningMetadataProvider{
 		rpcClient: rpcClient,
 	}, nil
 }
 
-func (sip *SigningInfoProvider) SigningMetadataForAccount(ctx context.Context, address string) (*SigningMetadata, error) {
+func (sip *SigningMetadataProvider) SigningMetadataForAccount(ctx context.Context, address string) (*SigningMetadata, error) {
 	account, err := sip.rpcClient.Account(ctx, address)
 	if err != nil {
 		return nil, err
 	}
 
 	return &SigningMetadata{
-		Address:       address,
-		AccountNumber: account.GetAccountNumber(),
-		Sequence:      account.GetSequence(),
+		address:       address,
+		accountNumber: account.GetAccountNumber(),
+		sequence:      account.GetSequence(),
 	}, nil
 }

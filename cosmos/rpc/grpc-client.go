@@ -149,21 +149,17 @@ func (r *grpcClient) Broadcast(
 	)
 }
 
-// Returns nil if the transaction is in a block
-func (r *grpcClient) CheckConfirmed(ctx context.Context, txHash string) error {
+func (r *grpcClient) CheckIncluded(ctx context.Context, txHash string) (bool, error) {
 	status, err := r.getTxStatus(ctx, txHash)
 	if err != nil {
-		r.log.Error().Err(err).Msg("Error querying tx status")
-		return err
+		return false, err
+	}
+
+	height := status.TxResponse.Height
+	if height != 0 {
+		return true, nil
 	} else {
-		height := status.TxResponse.Height
-		if height != 0 {
-			r.log.Debug().Err(err).Str("tx_hash", txHash).Int64("height", height).Msg("Transaction confirmed")
-			return nil
-		} else {
-			r.log.Debug().Msg("Transaction still not confirmed, still waiting...")
-			return fmt.Errorf("transaction not yet confirmed")
-		}
+		return false, nil
 	}
 }
 

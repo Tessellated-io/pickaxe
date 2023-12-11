@@ -52,18 +52,19 @@ func (r *retryableRpcClient) Broadcast(ctx context.Context, txBytes []byte) (*tx
 	return result, err
 }
 
-func (r *retryableRpcClient) CheckConfirmed(ctx context.Context, txHash string) error {
+func (r *retryableRpcClient) CheckIncluded(ctx context.Context, txHash string) (bool, error) {
+	var result bool
 	var err error
 
 	err = retry.Do(func() error {
-		err = r.wrappedClient.CheckConfirmed(ctx, txHash)
+		result, err = r.wrappedClient.CheckIncluded(ctx, txHash)
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
 	if err != nil {
 		err = errors.Unwrap(err)
 	}
 
-	return err
+	return result, err
 }
 
 func (r *retryableRpcClient) Simulate(ctx context.Context, txBytes []byte) (*txtypes.SimulateResponse, error) {
