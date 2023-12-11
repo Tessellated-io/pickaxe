@@ -8,7 +8,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-func WriteYamlWithComments(config interface{}, header string, filename string, logger *log.Logger) error {
+func WriteYamlWithComments(config interface{}, header, filename string, logger *log.Logger) error {
 	fileData, err := addCommentsToYaml(config, header)
 	if err != nil {
 		return err

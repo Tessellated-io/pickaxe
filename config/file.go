@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	os2 "os"
 	"os/user"
 	"strings"
@@ -32,7 +31,7 @@ func CreateDirectoryIfNeeded(configurationDirectory string, logger *log.Logger) 
 		return nil
 	}
 
-	err = os2.MkdirAll(configurationDirectory, 0755)
+	err = os2.MkdirAll(configurationDirectory, 0o755)
 	if err != nil {
 		return err
 	}
@@ -49,7 +48,7 @@ func SafeWrite(file string, contents []byte, logger *log.Logger) error {
 		return nil
 	}
 
-	err := ioutil.WriteFile(expanded, contents, 0644)
+	err := os.WriteFile(expanded, contents, 0o644)
 	if err != nil {
 		return err
 	}
