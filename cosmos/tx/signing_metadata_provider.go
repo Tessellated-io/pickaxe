@@ -16,7 +16,7 @@ func NewSigningMetadataProvider(rpcClient rpc.RpcClient) (*SigningMetadataProvid
 	}, nil
 }
 
-func (sip *SigningMetadataProvider) SigningMetadataForAccount(ctx context.Context, address string, chainID string) (*SigningMetadata, error) {
+func (sip *SigningMetadataProvider) SigningMetadataForAccount(ctx context.Context, address, chainID string) (*SigningMetadata, error) {
 	account, err := sip.rpcClient.Account(ctx, address)
 	if err != nil {
 		return nil, err
