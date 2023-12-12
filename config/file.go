@@ -31,7 +31,7 @@ func CreateDirectoryIfNeeded(configurationDirectory string, logger *log.Logger) 
 		return nil
 	}
 
-	err = os2.MkdirAll(configurationDirectory, 0o755)
+	err = os2.MkdirAll(expanded, 0o755)
 	if err != nil {
 		return err
 	}
