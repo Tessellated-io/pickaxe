@@ -9,6 +9,8 @@ import (
 	"github.com/tessellated-io/pickaxe/cosmos/util"
 	"github.com/tessellated-io/pickaxe/grpc"
 	"github.com/tessellated-io/pickaxe/log"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -103,7 +105,7 @@ func (r *grpcClient) GetBalance(ctx context.Context, address, denom string) (*sd
 	if err != nil {
 		return nil, err
 	}
-	r.log.Debug().Int("num balances", len(balances)).Str("address", address).Str("denom", denom).Msg("Retrieved balances")
+	r.log.Debug().Int("num_balances", len(balances)).Str("address", address).Str("denom", denom).Msg("Retrieved balances")
 
 	return util.ExtractCoin(denom, balances)
 }
@@ -150,12 +152,20 @@ func (r *grpcClient) Broadcast(
 }
 
 func (r *grpcClient) CheckIncluded(ctx context.Context, txHash string) (bool, error) {
-	status, err := r.getTxStatus(ctx, txHash)
+	txStatus, err := r.getTxStatus(ctx, txHash)
 	if err != nil {
+		// Check if the error was gRPC not found
+		grpcErr, ok := status.FromError(err)
+		if ok && grpcErr.Code() == codes.NotFound {
+			return false, nil
+		} else if ok {
+			fmt.Println("FYI, unwrapped grpc error to ", grpcErr)
+		}
+
 		return false, err
 	}
 
-	height := status.TxResponse.Height
+	height := txStatus.TxResponse.Height
 	if height != 0 {
 		return true, nil
 	} else {

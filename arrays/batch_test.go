@@ -7,6 +7,19 @@ import (
 	"github.com/tessellated-io/pickaxe/arrays"
 )
 
+func TestBatch_OneSizeBatch(t *testing.T) {
+	arr := []int{1, 2}
+	batched := arrays.Batch(arr, 1)
+
+	require.Equal(t, len(batched), 2)
+
+	require.Equal(t, len(batched[0]), 1)
+	require.Equal(t, len(batched[1]), 1)
+
+	require.Equal(t, batched[0][0], 1)
+	require.Equal(t, batched[1][0], 2)
+}
+
 func TestBatch_EvenBatches(t *testing.T) {
 	arr := []int{1, 2, 3, 4}
 	batched := arrays.Batch(arr, 2)
