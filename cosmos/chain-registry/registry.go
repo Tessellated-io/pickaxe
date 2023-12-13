@@ -39,12 +39,28 @@ func NewChainRegistryClient(log *log.Logger) *chainRegistryClient {
 
 func (rc *chainRegistryClient) ChainInfo(ctx context.Context, chainName string) (*ChainInfo, error) {
 	url := fmt.Sprintf("https://proxy.atomscan.com/directory/%s/chain.json", chainName)
+
 	bytes, err := rc.makeRequest(ctx, url)
 	if err != nil {
 		return nil, err
 	}
 
 	chainInfo, err := parseChainResponse(bytes)
+	if err != nil {
+		return nil, err
+	}
+	return chainInfo, nil
+}
+
+func (rc *chainRegistryClient) AssetList(ctx context.Context, chainName string) (*AssetList, error) {
+	url := fmt.Sprintf("https://proxy.atomscan.com/directory/%s/assetlist.json", chainName)
+
+	bytes, err := rc.makeRequest(ctx, url)
+	if err != nil {
+		return nil, err
+	}
+
+	chainInfo, err := parseAssetListResponse(bytes)
 	if err != nil {
 		return nil, err
 	}
@@ -84,13 +100,14 @@ func (rc *chainRegistryClient) ChainNameForChainID(ctx context.Context, targetCh
 			// NOTE: No retries because GetChainInfo manages that for us.
 			chainInfo, err := rc.ChainInfo(ctx, chainName)
 			if err != nil {
+				rc.log.Error().Err(err).Str("chain_name", chainName).Msg("error fetching chain information during chain id refresh")
 				return "", err
 			}
 
 			chainID = chainInfo.ChainID
 		}
 
-		if strings.EqualFold(chainName, chainID) {
+		if strings.EqualFold(targetChainID, chainID) {
 			return chainName, nil
 		}
 	}
@@ -100,7 +117,7 @@ func (rc *chainRegistryClient) ChainNameForChainID(ctx context.Context, targetCh
 
 func (rc *chainRegistryClient) AllChainNames(ctx context.Context) ([]string, error) {
 	// Get all chain names
-	url := "https://cosmos-chain.directory/chains"
+	url := "https://cosmoschains.thesilverfox.pro/api/v1/mainnet"
 	bytes, err := rc.makeRequest(ctx, url)
 	if err != nil {
 		return nil, err
@@ -143,6 +160,8 @@ func (rc *chainRegistryClient) Validators(ctx context.Context) ([]Validator, err
 // Private helpers
 
 func (rc *chainRegistryClient) makeRequest(ctx context.Context, url string) ([]byte, error) {
+	rc.log.Debug().Str("url", url).Msg("making GET request to url")
+
 	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err

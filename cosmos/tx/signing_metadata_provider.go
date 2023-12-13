@@ -14,6 +14,7 @@ type SigningMetadataProvider struct {
 
 func NewSigningMetadataProvider(chainID string, rpcClient rpc.RpcClient) (*SigningMetadataProvider, error) {
 	return &SigningMetadataProvider{
+		chainID:   chainID,
 		rpcClient: rpcClient,
 	}, nil
 }
