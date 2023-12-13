@@ -233,6 +233,7 @@ func (gm *defaultGasManager) trackFailure(chainID string) {
 
 // GasPriceProvider is a simple KV store for gas.
 type GasPriceProvider interface {
+	HasGasPrice(chainID string) (bool, error)
 	GetGasPrice(chainID string) (float64, error)
 	SetGasPrice(chainID string, gasPrice float64) error
 }
@@ -253,6 +254,14 @@ func NewInMemoryGasPriceProvider() (GasPriceProvider, error) {
 		lock: &sync.Mutex{},
 	}
 	return provider, nil
+}
+
+func (gp *InMemoryGasPriceProvider) HasGasPrice(chainID string) (bool, error) {
+	gp.lock.Lock()
+	defer gp.lock.Unlock()
+
+	_, found := gp.prices[chainID]
+	return found, nil
 }
 
 func (gp *InMemoryGasPriceProvider) GetGasPrice(chainID string) (float64, error) {
