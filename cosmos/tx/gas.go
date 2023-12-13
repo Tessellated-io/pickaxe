@@ -140,8 +140,6 @@ func (gm *defaultGasManager) ManageBroadcastResult(ctx context.Context, chainNam
 
 		gm.trackFailure(chainName)
 		return nil
-	} else if codespace == "gaia" && code == 4 {
-
 	}
 
 	// Otherwise, we got an unrelated error for broadcasting. Audibly drop it on the floor.
