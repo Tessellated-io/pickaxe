@@ -159,6 +159,7 @@ func (r *grpcClient) CheckIncluded(ctx context.Context, txHash string) (bool, er
 		if ok && grpcErr.Code() == codes.NotFound {
 			return false, nil
 		} else if ok {
+			// TODO: Deleteme
 			fmt.Println("FYI, unwrapped grpc error to ", grpcErr)
 		}
 
