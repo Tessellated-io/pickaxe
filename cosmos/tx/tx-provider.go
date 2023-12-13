@@ -14,7 +14,7 @@ import (
 )
 
 type TxProvider interface {
-	ProvideTx(ctx context.Context, gasPrice float64, messages []sdk.Msg, metadata *SigningMetadata) ([]byte, error)
+	ProvideTx(ctx context.Context, gasPrice float64, messages []sdk.Msg, metadata *SigningMetadata) ([]byte, uint64, error)
 }
 
 // txProvider is the default implementation of the Signer interface
@@ -52,11 +52,14 @@ func NewTxProvider(bytesSigner crypto.BytesSigner, chainID, feeDenom, memo strin
 // Signer Interface
 
 // Sign returns the set of messages, encoded with metadata, and includes a valid signature.
-func (txp *txProvider) ProvideTx(ctx context.Context, gasPrice float64, messages []sdk.Msg, metadata *SigningMetadata) ([]byte, error) {
+// It also includes the gas that was desired. This API is kinda nuts, but I can't find a sane way around it.
+func (txp *txProvider) ProvideTx(ctx context.Context, gasPrice float64, messages []sdk.Msg, metadata *SigningMetadata) ([]byte, uint64, error) {
+	txp.logger.Debug().Str("chain_id", metadata.chainID).Str("account", metadata.address).Uint64("sequence", metadata.sequence).Uint64("account_number", metadata.accountNumber).Msg("preparing to sign transaction")
+
 	// Build a transaction
 	txb, err := txp.txFactory.BuildUnsignedTx(messages...)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	txb.SetMemo(txp.memo)
@@ -70,15 +73,15 @@ func (txp *txProvider) ProvideTx(ctx context.Context, gasPrice float64, messages
 	}
 	err = txb.SetSignatures(signatureProto)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// Simulate the tx
 	simulationResult, err := txp.simulationManager.SimulateTx(ctx, txb.GetTx())
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	txp.logger.Info().Uint64("gas_units", simulationResult.GasRecommendation).Msg("simulated gas")
+	txp.logger.Debug().Uint64("gas_units", simulationResult.GasRecommendation).Msg("simulated gas")
 	txb.SetGasLimit(simulationResult.GasRecommendation)
 
 	fee := []sdk.Coin{
@@ -100,13 +103,13 @@ func (txp *txProvider) ProvideTx(ctx context.Context, gasPrice float64, messages
 	signMode := signing.SignMode_SIGN_MODE_DIRECT
 	unsignedTxBytes, err := txp.txConfig.SignModeHandler().GetSignBytes(signMode, signerData, txb.GetTx())
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// Sign the bytes
 	signatureBytes, err := txp.bytesSigner.SignBytes(unsignedTxBytes)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	// Reconstruct the signature proto
@@ -121,10 +124,15 @@ func (txp *txProvider) ProvideTx(ctx context.Context, gasPrice float64, messages
 	}
 	err = txb.SetSignatures(signatureProto)
 	if err != nil {
-		return []byte{}, err
+		return []byte{}, 0, err
 	}
 
 	// Encode to bytes
 	encoder := txp.txConfig.TxEncoder()
-	return encoder(txb.GetTx())
+	txBytes, err := encoder(txb.GetTx())
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return txBytes, simulationResult.GasRecommendation, nil
 }
