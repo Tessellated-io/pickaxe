@@ -14,7 +14,7 @@ import (
 )
 
 type TxProvider interface {
-	ProvideTx(ctx context.Context, gasPrice float64, gasFactor float64, messages []sdk.Msg, metadata *SigningMetadata) ([]byte, int64, error)
+	ProvideTx(ctx context.Context, gasPrice, gasFactor float64, messages []sdk.Msg, metadata *SigningMetadata) ([]byte, int64, error)
 }
 
 // txProvider is the default implementation of the Signer interface
@@ -53,7 +53,7 @@ func NewTxProvider(bytesSigner crypto.BytesSigner, chainID, feeDenom, memo strin
 
 // Sign returns the set of messages, encoded with metadata, and includes a valid signature.
 // It also includes the gas that was desired. This API is kinda nuts, but I can't find a sane way around it.
-func (txp *txProvider) ProvideTx(ctx context.Context, gasPrice float64, gasFactor float64, messages []sdk.Msg, metadata *SigningMetadata) ([]byte, int64, error) {
+func (txp *txProvider) ProvideTx(ctx context.Context, gasPrice, gasFactor float64, messages []sdk.Msg, metadata *SigningMetadata) ([]byte, int64, error) {
 	txp.logger.Debug().Str("chain_id", metadata.chainID).Str("account", metadata.address).Uint64("sequence", metadata.sequence).Uint64("account_number", metadata.accountNumber).Msg("preparing to sign transaction")
 
 	// Build a transaction

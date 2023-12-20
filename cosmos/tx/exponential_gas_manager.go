@@ -291,12 +291,16 @@ func (g *geometricGasManager) trackGasPriceSuccess(chainName string) error {
 // Helpers -  adjustments
 
 // TODO: config params
-const baseFactorSuccessThreshold = 10
-const factorStepSize = 0.01
+const (
+	baseFactorSuccessThreshold = 10
+	factorStepSize             = 0.01
+)
 
-var maxFactorThreshold = 100
-var currentFactorSuccessThreshold = baseFactorSuccessThreshold
-var isTryingToStepDownFactor = false
+var (
+	maxFactorThreshold            = 100
+	currentFactorSuccessThreshold = baseFactorSuccessThreshold
+	isTryingToStepDownFactor      = false
+)
 
 // TODO: Theoretically this could just be injected to allow generalization. That feels over-optimizey for now.
 func (g *geometricGasManager) adjustFactor(chainName string, successes, failures int) error {
