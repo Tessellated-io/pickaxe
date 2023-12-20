@@ -44,7 +44,7 @@ func NewDefaultBroadcaster(
 		return nil, err
 	}
 
-	txb2, err := NewPollingTxBroadcaster(txPollAttempts, txPollDelay, logger, rpcClient, txb1)
+	txb2, err := NewPollingTxBroadcaster(txPollAttempts, txPollDelay, logger, txb1)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +286,6 @@ type pollingTxBroadcaster struct {
 
 	// Services
 	logger             *log.Logger
-	rpcClient          rpc.RpcClient
 	wrappedBroadcaster TxBroadcaster
 }
 
@@ -296,7 +295,6 @@ func NewPollingTxBroadcaster(
 	attempts uint,
 	delay time.Duration,
 	logger *log.Logger,
-	rpcClient rpc.RpcClient,
 	wrappedBroadcaster TxBroadcaster,
 ) (TxBroadcaster, error) {
 	broadcaster := &pollingTxBroadcaster{
@@ -304,7 +302,6 @@ func NewPollingTxBroadcaster(
 		delay:    delay,
 
 		logger:             logger,
-		rpcClient:          rpcClient,
 		wrappedBroadcaster: wrappedBroadcaster,
 	}
 
@@ -314,76 +311,8 @@ func NewPollingTxBroadcaster(
 func (b *pollingTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []sdk.Msg) (broadcastResult *txtypes.BroadcastTxResponse, err error) {
 	// Pass through, there's no polling to be done on initial broadcast.
 	return b.wrappedBroadcaster.signAndBroadcast(ctx, msgs)
-	// if err != nil {
-	// 	return result, err
-	// }
-
-	// // Sanity / safety checks
-	// if result == nil {
-	// 	return nil, fmt.Errorf("received nil broadcast tx result")
-	// }
-	// if result.TxResponse == nil {
-	// 	return nil, fmt.Errorf("received nil tx response in broadcast tx result")
-	// }
-
-	// // Poll
-	// txHash := result.TxResponse.TxHash
-	// b.logger.Info().Str("tx_hash", txHash).Msg("polling for inclusion")
-	// var i uint
-	// for i = 0; i < b.attempts; i++ {
-	// 	// Ditch if context has timed out
-	// 	if ctx.Err() != nil {
-	// 		return nil, ctx.Err()
-	// 	}
-
-	// 	// Initially sleep to give time to settle
-	// 	time.Sleep(b.delay)
-
-	// 	// Check for inclusion, ditching if the check fails.
-	// 	// NOTE: If you'd like retries, give a retryable RPC client
-	// 	txStatus, err := b.rpcClient.GetTxStatus(ctx, txHash)
-
-	// 	// Check to see if we got a tx status
-	// 	if err == nil {
-
-	// 	}
-
-	// 	// If there was an error checking for tx status, check to see if it was a "not found" error, which would indicate we should poll again.
-	// 	if err != nil {
-	// 		// Check if the error was gRPC not found
-	// 		grpcErr, ok := status.FromError(err)
-	// 		if ok && grpcErr.Code() == codes.NotFound {
-	// 			return false, nil
-	// 		} else {
-	// 			// Otherwise, something else has gone wrong, return error.
-	// 			b.logger.Error().Err(err).Str("tx_hash", txHash).Uint("attempt", i+1).Uint("max_attempts", b.attempts).Msg("error polling for tx inclusion")
-	// 			return nil, err
-	// 		}
-
-	// 	}
-
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-
-	// 	//
-
-	// 	// Return if successful
-	// 	if included {
-	// 		b.logger.Info().Str("tx_hash", txHash).Uint("attempt", i+1).Uint("max_attempts", b.attempts).Msg("transaction confirmed in block")
-	// 		return result, nil
-	// 	}
-
-	// 	// Log that we're still thinking
-	// 	if i+1 == b.attempts {
-	// 		b.logger.Info().Str("tx_hash", txHash).Uint("attempt", i+1).Uint("max_attempts", b.attempts).Msg("transaction still not included")
-	// 	}
-	// }
-
-	// return result, fmt.Errorf("transaction not included after exhausting all polling attempts: %s", txHash)
 }
 
-// TODO: Can probably get rid of rpc client in this class.
 func (b *pollingTxBroadcaster) checkTxStatus(ctx context.Context, txHash string) (*txtypes.GetTxResponse, error) {
 	b.logger.Info().Str("tx_hash", txHash).Msg("polling for inclusion")
 	var i uint
@@ -585,71 +514,6 @@ func (b *retryableTxBroadcaster) checkTxStatus(ctx context.Context, txHash strin
 	}
 	panic("should never happen")
 }
-
-// // Gas Recoverable broadcaster retries broadcasting if there's a failure due to gas
-// type gasRecoverableBroadcaster struct {
-// 	// Services
-// 	logger             *log.Logger
-// 	wrappedBroadcaster TxBroadcaster
-// }
-
-// var _ TxBroadcaster = (*gasRecoverableBroadcaster)(nil)
-
-// func NewGasRecoverableBroadcaster(
-// 	logger *log.Logger,
-// 	wrappedBroadcaster TxBroadcaster,
-// ) (TxBroadcaster, error) {
-// 	broadcaster := &retryableTxBroadcaster{
-// 		logger:             logger,
-// 		wrappedBroadcaster: wrappedBroadcaster,
-// 	}
-
-// 	return broadcaster, nil
-// }
-
-// func (b *gasRecoverableBroadcaster) signAndBroadcast(ctx context.Context, msgs []sdk.Msg) (broadcastResult *txtypes.BroadcastTxResponse, err error) {
-// 	for {
-// 		// Ditch if context has timed out
-// 		if ctx.Err() != nil {
-// 			return nil, ctx.Err()
-// 		}
-
-// 		// Attempt to sign and broadcast
-// 		result, err := b.wrappedBroadcaster.signAndBroadcast(ctx, msgs)
-// 		if err == nil {
-// 			return result, err
-// 		}
-
-// 		codespace := result.TxResponse.Codespace
-// 		code := result.TxResponse.Code
-// 		if IsGasRelatedError(codespace, code) {
-// 			b.logger.Error().Err(fmt.Errorf("detected gas error in broadcast")).Str("codespace", codespace).Uint32("code", code).Msg("failed to sign and broadcast due to gas, will retry")
-// 		}
-// 	}
-// }
-
-// func (b *gasRecoverableBroadcaster) checkTxStatus(ctx context.Context, txHash string) (*txtypes.GetTxResponse, error) {
-// 	for {
-// 		// Ditch if context has timed out
-// 		if ctx.Err() != nil {
-// 			return nil, ctx.Err()
-// 		}
-
-// 		// Attempt to sign and broadcast
-// 		result, err := b.wrappedBroadcaster.checkTxStatus(ctx, txHash)
-
-// 		// It's possible we got nil/nil because of a gas error here, but rebroadcasting is rough due to long lived mempools (likely an infinite loop), so just return
-// 		if result != nil {
-// 			return result, err
-// 		}
-
-// 		codespace := result.TxResponse.Codespace
-// 		code := result.TxResponse.Code
-// 		if IsGasRelatedError(codespace, code) {
-// 			b.logger.Error().Err(fmt.Errorf("detected gas error in broadcast")).Str("codespace", codespace).Uint32("code", code).Str("tx_hash", txHash).Msg("tx status confirmed and failed due to gas, will retry")
-// 		}
-// 	}
-// }
 
 // Helpers
 
