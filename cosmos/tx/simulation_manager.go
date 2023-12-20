@@ -12,14 +12,12 @@ import (
 
 // SimulationManager manages simulating gas from transactions.
 type SimulationManager interface {
-	SimulateTx(ctx context.Context, tx authsigning.Tx) (*SimulationResult, error)
-	SimulateTxBytes(ctx context.Context, txBytes []byte) (*SimulationResult, error)
+	SimulateTx(ctx context.Context, tx authsigning.Tx, gasFactor float64) (*SimulationResult, error)
+	SimulateTxBytes(ctx context.Context, txBytes []byte, gasFactor float64) (*SimulationResult, error)
 }
 
 // simulationManager is the default implementation
 type simulationManager struct {
-	gasFactor float64
-
 	txConfig  client.TxConfig
 	rpcClient rpc.RpcClient
 }
@@ -28,10 +26,8 @@ type simulationManager struct {
 var _ SimulationManager = (*simulationManager)(nil)
 
 // NewSimulationManager makes a new default simulationManager
-func NewSimulationManager(gasFactor float64, rpcClient rpc.RpcClient, txConfig client.TxConfig) (SimulationManager, error) {
+func NewSimulationManager(rpcClient rpc.RpcClient, txConfig client.TxConfig) (SimulationManager, error) {
 	return &simulationManager{
-		gasFactor: gasFactor,
-
 		txConfig:  txConfig,
 		rpcClient: rpcClient,
 	}, nil
@@ -39,7 +35,7 @@ func NewSimulationManager(gasFactor float64, rpcClient rpc.RpcClient, txConfig c
 
 // Simulation Managar interface
 
-func (sm *simulationManager) SimulateTx(ctx context.Context, tx authsigning.Tx) (*SimulationResult, error) {
+func (sm *simulationManager) SimulateTx(ctx context.Context, tx authsigning.Tx, gasFactor float64) (*SimulationResult, error) {
 	// Form transaction bytes
 	encoder := sm.txConfig.TxEncoder()
 	txBytes, err := encoder(tx)
@@ -47,16 +43,16 @@ func (sm *simulationManager) SimulateTx(ctx context.Context, tx authsigning.Tx) 
 		return nil, err
 	}
 
-	return sm.SimulateTxBytes(ctx, txBytes)
+	return sm.SimulateTxBytes(ctx, txBytes, gasFactor)
 }
 
-func (sm *simulationManager) SimulateTxBytes(ctx context.Context, txBytes []byte) (*SimulationResult, error) {
+func (sm *simulationManager) SimulateTxBytes(ctx context.Context, txBytes []byte, gasFactor float64) (*SimulationResult, error) {
 	simulationResponse, err := sm.rpcClient.Simulate(ctx, txBytes)
 	if err != nil {
 		return nil, err
 	}
 
 	return &SimulationResult{
-		GasRecommendation: uint64(math.Ceil(float64(simulationResponse.GasInfo.GasUsed) * sm.gasFactor)),
+		GasRecommendation: int64(math.Ceil(float64(simulationResponse.GasInfo.GasUsed) * gasFactor)),
 	}, nil
 }

@@ -10,10 +10,9 @@ import (
 	banktypes "github.com/cosmos/cosmos-sdk/x/bank/types"
 )
 
-// Handles RPCs for Restake
+// Handles RPCs with Tendermint nodes
 type RpcClient interface {
 	Broadcast(ctx context.Context, txBytes []byte) (*txtypes.BroadcastTxResponse, error)
-	CheckIncluded(ctx context.Context, txHash string) (bool, error)
 
 	Simulate(ctx context.Context, txBytes []byte) (*txtypes.SimulateResponse, error)
 
@@ -24,4 +23,5 @@ type RpcClient interface {
 	GetDenomMetadata(ctx context.Context, denom string) (*banktypes.Metadata, error)
 	GetGrants(ctx context.Context, botAddress string) ([]*authztypes.GrantAuthorization, error)
 	GetPendingRewards(ctx context.Context, delegator, validator, stakingDenom string) (sdk.Dec, error)
+	GetTxStatus(ctx context.Context, txHash string) (*txtypes.GetTxResponse, error)
 }

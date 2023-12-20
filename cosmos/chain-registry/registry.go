@@ -49,6 +49,10 @@ func (rc *chainRegistryClient) ChainInfo(ctx context.Context, chainName string) 
 	if err != nil {
 		return nil, err
 	}
+
+	// Add data to cache
+	rc.chainNameToChainID[chainName] = chainInfo.ChainID
+
 	return chainInfo, nil
 }
 
@@ -72,13 +76,13 @@ func (rc *chainRegistryClient) ChainNameForChainID(ctx context.Context, targetCh
 	if refreshCache {
 		rc.chainNames = []string{}
 		rc.chainNameToChainID = make(map[string]string)
-		rc.log.Debug().Msg("reset chain names and chain ids caches")
+		rc.log.Debug().Msg("reset chain names and chain ids caches per client request")
 	}
 
 	// Fetch chain names if they are not cached, or if we requested a refetch from the cache
 	chainNames := rc.chainNames
 	if len(chainNames) == 0 {
-		rc.log.Debug().Msg("no cached name found, reloading from registry")
+		rc.log.Debug().Msg("no index of chain names, reloading from registry")
 
 		var err error
 		chainNames, err = rc.AllChainNames(ctx)
@@ -88,14 +92,17 @@ func (rc *chainRegistryClient) ChainNameForChainID(ctx context.Context, targetCh
 
 		rc.log.Debug().Int("num_chains", len(chainNames)).Msg("loaded chains from the registry")
 		rc.chainNames = chainNames
+		rc.log.Debug().Int("num_chains", len(rc.chainNames)).Msg("updated chain name index in client")
 	}
 
 	// For each chain name, get the chain id from the cache or from fetching
-	for _, chainName := range chainNames {
-		rc.log.Debug().Str("chain_name", chainName).Msg("processing chain")
+	for chainIdx, chainName := range chainNames {
+		rc.log.Debug().Str("chain_name", chainName).Int("chain_index", chainIdx).Msg("processing chain")
 
 		chainID, isSet := rc.chainNameToChainID[chainName]
 		if !isSet {
+			rc.log.Debug().Str("chain_name", chainName).Msg("no chain data found in cache, requesting from registry")
+
 			// Fetch the chain ID for the chain
 			// NOTE: No retries because GetChainInfo manages that for us.
 			chainInfo, err := rc.ChainInfo(ctx, chainName)
@@ -105,6 +112,11 @@ func (rc *chainRegistryClient) ChainNameForChainID(ctx context.Context, targetCh
 			}
 
 			chainID = chainInfo.ChainID
+
+			// Set in cache
+			rc.chainNameToChainID[chainName] = chainID
+		} else {
+			rc.log.Debug().Str("chain_name", chainName).Msg("found chain id in cache")
 		}
 
 		if strings.EqualFold(targetChainID, chainID) {
@@ -179,8 +191,16 @@ func (rc *chainRegistryClient) makeRequest(ctx context.Context, url string) ([]b
 		if err != nil {
 			return nil, err
 		}
+		// rc.log.Debug().Str("response", string(data)).Msg("received http 200 response from chain registry")
+		rc.log.Debug().Msg("received http 200 response from chain registry")
+
 		return data, nil
 	} else {
+		data, err := io.ReadAll(resp.Body)
+		if err == nil {
+			rc.log.Debug().Str("response", string(data)).Int("status_code", resp.StatusCode).Msg("received bad response from chain registry")
+		}
+
 		return nil, fmt.Errorf("received non-OK HTTP status: %d", resp.StatusCode)
 	}
 }

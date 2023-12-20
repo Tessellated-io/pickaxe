@@ -68,6 +68,13 @@ func ExpandHomeDir(path string) string {
 	return strings.Replace(path, "~", usr.HomeDir, 1)
 }
 
+func fileExists(filePath string) (bool, error) {
+	expanded := ExpandHomeDir(filePath)
+	exists := os.FileExists(expanded)
+
+	return exists, nil
+}
+
 func folderExists(folderPath string) (bool, error) {
 	fileInfo, err := os2.Stat(folderPath)
 	if err != nil {
