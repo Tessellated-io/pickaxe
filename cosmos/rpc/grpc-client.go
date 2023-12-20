@@ -9,8 +9,6 @@ import (
 	"github.com/tessellated-io/pickaxe/cosmos/util"
 	"github.com/tessellated-io/pickaxe/grpc"
 	"github.com/tessellated-io/pickaxe/log"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -26,7 +24,7 @@ import (
 // Page size to use
 const pageSize = 100
 
-// grpcClient is the private and default implementation for restake.
+// grpcClient is the private and default implementation.
 type grpcClient struct {
 	cdc *codec.ProtoCodec
 
@@ -49,7 +47,7 @@ type paginatedRpcResponse[dataType any] struct {
 // Ensure that grpcClient implements RpcClient
 var _ RpcClient = (*grpcClient)(nil)
 
-// NewRpcClient makes a new RpcClient for the Restake Go App.
+// NewRpcClient makes a new RpcClient.
 func NewGrpcClient(nodeGrpcUri string, cdc *codec.ProtoCodec, log *log.Logger) (RpcClient, error) {
 	conn, err := grpc.GetGrpcConnection(nodeGrpcUri)
 	if err != nil {
@@ -151,30 +149,7 @@ func (r *grpcClient) Broadcast(
 	)
 }
 
-func (r *grpcClient) CheckIncluded(ctx context.Context, txHash string) (bool, error) {
-	txStatus, err := r.getTxStatus(ctx, txHash)
-	if err != nil {
-		// Check if the error was gRPC not found
-		grpcErr, ok := status.FromError(err)
-		if ok && grpcErr.Code() == codes.NotFound {
-			return false, nil
-		} else if ok {
-			// TODO: Deleteme
-			fmt.Println("FYI, unwrapped grpc error to ", grpcErr)
-		}
-
-		return false, err
-	}
-
-	height := txStatus.TxResponse.Height
-	if height != 0 {
-		return true, nil
-	} else {
-		return false, nil
-	}
-}
-
-func (r *grpcClient) getTxStatus(ctx context.Context, txHash string) (*txtypes.GetTxResponse, error) {
+func (r *grpcClient) GetTxStatus(ctx context.Context, txHash string) (*txtypes.GetTxResponse, error) {
 	request := &txtypes.GetTxRequest{Hash: txHash}
 	return r.txClient.GetTx(ctx, request)
 }

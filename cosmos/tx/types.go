@@ -1,7 +1,7 @@
 package tx
 
 type SimulationResult struct {
-	GasRecommendation uint64
+	GasRecommendation int64
 }
 
 type SigningMetadata struct {

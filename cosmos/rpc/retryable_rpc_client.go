@@ -68,16 +68,16 @@ func (r *retryableRpcClient) Broadcast(ctx context.Context, txBytes []byte) (*tx
 	return result, nil
 }
 
-func (r *retryableRpcClient) CheckIncluded(ctx context.Context, txHash string) (bool, error) {
-	var result bool
+func (r *retryableRpcClient) GetTxStatus(ctx context.Context, txHash string) (*txtypes.GetTxResponse, error) {
+	var result *txtypes.GetTxResponse
 	var err error
 
 	err = retry.Do(func() error {
-		result, err = r.wrappedClient.CheckIncluded(ctx, txHash)
-
+		result, err = r.wrappedClient.GetTxStatus(ctx, txHash)
 		if err != nil {
-			r.logger.Error().Err(err).Str("method", "check_included").Msg("failed call in rpc client, will retry")
+			r.logger.Error().Err(err).Str("method", "tx_status").Msg("failed call in rpc client, will retry")
 		}
+
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
 
@@ -85,9 +85,9 @@ func (r *retryableRpcClient) CheckIncluded(ctx context.Context, txHash string) (
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
 		if unwrappedErr != nil {
-			return result, unwrappedErr
+			return nil, unwrappedErr
 		} else {
-			return result, err
+			return nil, err
 		}
 	}
 
