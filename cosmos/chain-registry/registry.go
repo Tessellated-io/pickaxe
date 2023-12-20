@@ -191,7 +191,6 @@ func (rc *chainRegistryClient) makeRequest(ctx context.Context, url string) ([]b
 		if err != nil {
 			return nil, err
 		}
-		// rc.log.Debug().Str("response", string(data)).Msg("received http 200 response from chain registry")
 		rc.log.Debug().Msg("received http 200 response from chain registry")
 
 		return data, nil
