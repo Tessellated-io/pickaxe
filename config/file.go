@@ -68,7 +68,7 @@ func ExpandHomeDir(path string) string {
 	return strings.Replace(path, "~", usr.HomeDir, 1)
 }
 
-func fileExists(filePath string) (bool, error) {
+func FileExists(filePath string) (bool, error) {
 	expanded := ExpandHomeDir(filePath)
 	exists := os.FileExists(expanded)
 
