@@ -10,7 +10,7 @@ import (
 	"github.com/tessellated-io/pickaxe/log"
 )
 
-// normalizeConfigFile loads a config file from a short path (ex. ~/.restake/config.yml => /home/tessellated/.restake/config.yaml)
+// normalizeConfigFile loads a config file from a short path (ex. ~/.restake/config.yml => /home/tessellated/.restake/config.yml)
 func ReadFile(configFile string) (string, error) {
 	expandedConfigFile := ExpandHomeDir(configFile)
 	configOk := os.FileExists(expandedConfigFile)
