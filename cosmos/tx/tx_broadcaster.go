@@ -382,7 +382,7 @@ func NewGasTrackingTxBroadcaster(
 // NOTE: This function is just a pure pass through that does gas management
 func (b *gasTrackingTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []sdk.Msg) (broadcastResult *txtypes.BroadcastTxResponse, err error) {
 	result, originalBroadcastErr := b.wrappedBroadcaster.signAndBroadcast(ctx, msgs)
-	if err != nil {
+	if originalBroadcastErr != nil {
 		return nil, err
 	}
 
