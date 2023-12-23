@@ -76,8 +76,9 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 
 		// Attempt to sign and broadcast
 		broadcastResult, broadcastErr := b.wrapped.signAndBroadcast(ctx, msgs)
+		b.logger.Debug().Err(broadcastErr).Str("broadcast_result", broadcastResult.String()).Msg("broadcaster::recevied from signAndBroadcast")
 		if broadcastErr != nil {
-			return "", err
+			return "", broadcastErr
 		}
 
 		// Check if we failed
@@ -347,7 +348,11 @@ func (b *pollingTxBroadcaster) checkTxStatus(ctx context.Context, txHash string)
 		}
 	}
 
-	return nil, fmt.Errorf("transaction not included after exhausting all polling attempts: %s", txHash)
+	err := fmt.Errorf("transaction not included after exhausting all polling attempts: %s", txHash)
+	b.logger.Error().Err(err).Str("tx_hash", txHash).Msg("polling finished")
+
+	// Return nil here, since a not found error isn't really a nil error, and we may want to do things like track gas.
+	return nil, nil
 }
 
 // gasTrackingTxBroadcaster tracks and updates gas prices
@@ -408,25 +413,34 @@ func (b *gasTrackingTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []
 
 func (b *gasTrackingTxBroadcaster) checkTxStatus(ctx context.Context, txHash string) (*txtypes.GetTxResponse, error) {
 	txStatus, err := b.wrappedBroadcaster.checkTxStatus(ctx, txHash)
+	b.logger.Debug().Err(err).Str("tx_status", txStatus.String()).Msg("gas_tracking_tx_broadcaster::got checktx result")
+
 	// Errors indicate a fundamental problem, like network connectivity
 	if err != nil {
+		b.logger.Debug().Msg("gas_tracking_tx_broadcaster::receiveds error from wrapped broadcaster, will not adjust gas")
 		return txStatus, err
 	}
 
 	// If there's no error, but no txstatus reported, then the transaction is probably under-fee'd and we should report failure
 	if err == nil && txStatus == nil {
+		b.logger.Debug().Msg("gas_tracking_tx_broadcaster::did not find transaction, but did not get an error, adjusting gas")
+
 		gasManagementErr := b.gasManager.ManageInclusionFailure(b.chainName)
 		if gasManagementErr != nil {
 			b.logger.Warn().Err(gasManagementErr).Msg("failed to adjust gas due to missing tx inclusion.")
 		}
+
+		b.logger.Debug().Msg("gas_tracking_tx_broadcaster::adjusted gas")
 		return txStatus, err
 	}
 
 	// If there is a tx status, try to manage it.
+	b.logger.Debug().Msg("gas_tracking_tx_broadcaster::got a check tx result")
 	gasManagementErr := b.gasManager.ManageIncludedTransactionStatus(b.chainName, txStatus)
 	if gasManagementErr != nil {
 		b.logger.Warn().Err(gasManagementErr).Msg("failed to adjust gas due to tx status")
 	}
+	b.logger.Debug().Msg("gas_tracking_tx_broadcaster::adjusted gas due to check tx result")
 	return txStatus, err
 }
 
