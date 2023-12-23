@@ -78,7 +78,7 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 		broadcastResult, broadcastErr := b.wrapped.signAndBroadcast(ctx, msgs)
 		b.logger.Debug().Err(broadcastErr).Str("broadcast_result", broadcastResult.String()).Msg("broadcaster::recevied from signAndBroadcast")
 		if broadcastErr != nil {
-			return "", err
+			return "", broadcastErr
 		}
 
 		// Check if we failed
