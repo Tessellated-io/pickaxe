@@ -380,9 +380,9 @@ func NewGasTrackingTxBroadcaster(
 }
 
 // NOTE: This function is just a pure pass through that does gas management
-func (b *gasTrackingTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []sdk.Msg) (broadcastResult *txtypes.BroadcastTxResponse, err error) {
-	result, originalBroadcastErr := b.wrappedBroadcaster.signAndBroadcast(ctx, msgs)
-	if originalBroadcastErr != nil {
+func (b *gasTrackingTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []sdk.Msg) (*txtypes.BroadcastTxResponse, error) {
+	result, err := b.wrappedBroadcaster.signAndBroadcast(ctx, msgs)
+	if err != nil {
 		return nil, err
 	}
 
@@ -394,7 +394,7 @@ func (b *gasTrackingTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []
 
 	// Don't adjust on successful broadcasts, instead wait to see if it successfully lands on chain.
 	if isSuccess {
-		return result, originalBroadcastErr
+		return result, err
 	}
 
 	// Otherwise, try to handle the result for gas adjustment
@@ -403,7 +403,7 @@ func (b *gasTrackingTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []
 		b.logger.Warn().Err(gasManagementErr).Msg("failed to adjust gas due to broadcast result.")
 	}
 
-	return result, originalBroadcastErr
+	return result, err
 }
 
 func (b *gasTrackingTxBroadcaster) checkTxStatus(ctx context.Context, txHash string) (*txtypes.GetTxResponse, error) {
