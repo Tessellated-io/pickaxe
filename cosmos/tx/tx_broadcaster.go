@@ -383,7 +383,7 @@ func NewGasTrackingTxBroadcaster(
 func (b *gasTrackingTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []sdk.Msg) (broadcastResult *txtypes.BroadcastTxResponse, err error) {
 	result, originalBroadcastErr := b.wrappedBroadcaster.signAndBroadcast(ctx, msgs)
 	if originalBroadcastErr != nil {
-		return nil, err
+		return nil, originalBroadcastErr
 	}
 
 	// Check for success
