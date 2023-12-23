@@ -83,7 +83,7 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 		// Check if we failed
 		isSuccess, isSuccessErr := IsSuccess(broadcastResult)
 		if isSuccessErr != nil {
-			panic("should never happen")
+			panic("broadcaster::should never happen")
 		}
 
 		if !isSuccess {
@@ -389,7 +389,7 @@ func (b *gasTrackingTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []
 	// Check for success
 	isSuccess, err := IsSuccess(result)
 	if err != nil {
-		panic("should never happen")
+		panic("gas_tracking_tx_broadcaster::should never happen")
 	}
 
 	// Don't adjust on successful broadcasts, instead wait to see if it successfully lands on chain.
@@ -485,7 +485,7 @@ func (b *retryableTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []sd
 		time.Sleep(b.delay)
 
 	}
-	panic("should never happen")
+	panic("retryable_tx_broadcaster::sign_and_broadcast::should never happen")
 }
 
 func (b *retryableTxBroadcaster) checkTxStatus(ctx context.Context, txHash string) (*txtypes.GetTxResponse, error) {
@@ -512,7 +512,7 @@ func (b *retryableTxBroadcaster) checkTxStatus(ctx context.Context, txHash strin
 		b.logger.Error().Err(err).Uint("attempt", i+1).Uint("max_attempts", b.attempts).Msg("failed to check tx status, will retry.")
 		time.Sleep(b.delay)
 	}
-	panic("should never happen")
+	panic("retryable_tx_broadcaster::check_tx_status::should never happen")
 }
 
 // Helpers
