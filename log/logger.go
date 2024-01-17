@@ -40,7 +40,7 @@ func newLoggerWithPrefix(prefix string) *Logger {
 }
 
 func (l *Logger) ApplyPrefix(additionalPrefix string) *Logger {
-	newPrefix := fmt.Sprintf("%s%s", l.prefix, additionalPrefix)
+	newPrefix := fmt.Sprintf("%s %s", l.prefix, additionalPrefix)
 
 	return newLoggerWithPrefix(newPrefix)
 }
