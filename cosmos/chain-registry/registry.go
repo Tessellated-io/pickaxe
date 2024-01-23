@@ -38,7 +38,7 @@ func NewChainRegistryClient(log *log.Logger) *chainRegistryClient {
 // ChainRegistryClient interface
 
 func (rc *chainRegistryClient) ChainInfo(ctx context.Context, chainName string) (*ChainInfo, error) {
-	url := fmt.Sprintf("https://proxy.atomscan.com/directory/%s/chain.json", chainName)
+	url := fmt.Sprintf("https://registry.ping.pub//%s/chain.json", chainName)
 
 	bytes, err := rc.makeRequest(ctx, url)
 	if err != nil {
@@ -57,7 +57,7 @@ func (rc *chainRegistryClient) ChainInfo(ctx context.Context, chainName string) 
 }
 
 func (rc *chainRegistryClient) AssetList(ctx context.Context, chainName string) (*AssetList, error) {
-	url := fmt.Sprintf("https://proxy.atomscan.com/directory/%s/assetlist.json", chainName)
+	url := fmt.Sprintf("https://registry.ping.pub//%s/assetlist.json", chainName)
 
 	bytes, err := rc.makeRequest(ctx, url)
 	if err != nil {
