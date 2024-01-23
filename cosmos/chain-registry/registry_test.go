@@ -35,3 +35,10 @@ func TestCanRetrieveAllChains(t *testing.T) {
 	_, err := client.AllChainNames(context.Background())
 	assert.Nil(t, err, "error should be nil")
 }
+
+func TestCanRetrieveValidator(t *testing.T) {
+	client := registry.NewChainRegistryClient(log.NewLogger(zerolog.FatalLevel), chainsBaseUrl, validatorsBaseUrl)
+
+	_, err := client.Validator(context.Background(), "tessellated")
+	assert.Nil(t, err, "error should be nil")
+}

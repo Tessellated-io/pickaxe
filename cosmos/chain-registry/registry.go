@@ -158,7 +158,7 @@ func (rc *chainRegistryClient) AllChainNames(ctx context.Context) ([]string, err
 }
 
 func (rc *chainRegistryClient) Validator(ctx context.Context, targetValidator string) (*Validator, error) {
-	url := fmt.Sprintf("%s/%s", rc.validatorRegistryBaseUrl, targetValidator)
+	url := fmt.Sprintf("%s/%s/chains.json", rc.validatorRegistryBaseUrl, targetValidator)
 	bytes, err := rc.makeRequest(ctx, url)
 	if err != nil {
 		return nil, err
