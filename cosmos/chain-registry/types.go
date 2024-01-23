@@ -179,21 +179,13 @@ type RestakeInfo struct {
 }
 
 type Validator struct {
-	Path       string        `json:"path"`
-	Name       string        `json:"name"`
-	Identity   string        `json:"identity"`
-	TotalUSD   float64       `json:"total_usd"`
-	TotalUsers int           `json:"total_users"`
-	Chains     []RestakeInfo `json:"chains"`
+	Name   string        `json:"name"`
+	Chains []RestakeInfo `json:"chains"`
 }
 
-type Response struct {
-	Validators []Validator `json:"validators"`
-}
-
-func parseValidatorRegistryResponse(responseBytes []byte) (*Response, error) {
+func parseValidator(responseBytes []byte) (*Validator, error) {
 	// Unmarshal JSON data
-	var response Response
+	var response Validator
 	if err := json.Unmarshal(responseBytes, &response); err != nil {
 		return nil, err
 	}
