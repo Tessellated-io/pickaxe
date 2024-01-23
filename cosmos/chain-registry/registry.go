@@ -52,7 +52,7 @@ func NewChainRegistryClient(log *log.Logger, chainRegistryBaseUrl string, valida
 // ChainRegistryClient interface
 
 func (rc *chainRegistryClient) ChainInfo(ctx context.Context, chainName string) (*ChainInfo, error) {
-	url := fmt.Sprintf("%s/%s/chain.json ", rc.chainRegistryBaseUrl, chainName)
+	url := fmt.Sprintf("%s/%s/chain.json", rc.chainRegistryBaseUrl, chainName)
 
 	bytes, err := rc.makeRequest(ctx, url)
 	if err != nil {
