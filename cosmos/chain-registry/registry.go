@@ -10,6 +10,13 @@ import (
 	"github.com/tessellated-io/pickaxe/log"
 )
 
+/**
+ * A chain registry client.
+ *
+ * This class is made to be compatible with Planetarium (https://github.com/tessellated-io/planetarium), which is a hosted version
+ * of the Chain Registry provided by Tessellated, although it should be compatible with other services by providing custom base urls.
+ */
+
 // Default implementation
 type chainRegistryClient struct {
 	// Cache of all chain names
@@ -19,7 +26,8 @@ type chainRegistryClient struct {
 	chainNameToChainID map[string]string
 
 	// Base url of an API service
-	baseURL string
+	chainRegistryBaseUrl     string
+	validatorRegistryBaseUrl string
 
 	log *log.Logger
 }
@@ -28,13 +36,14 @@ type chainRegistryClient struct {
 var _ ChainRegistryClient = (*chainRegistryClient)(nil)
 
 // NewRegistryClient makes a new default registry client.
-func NewChainRegistryClient(log *log.Logger, baseURL string) *chainRegistryClient {
+func NewChainRegistryClient(log *log.Logger, chainRegistryBaseUrl, validatorRegistryBaseUrl string) *chainRegistryClient {
 	return &chainRegistryClient{
 		// Initially empty chain name cache
 		chainNames:         []string{},
 		chainNameToChainID: make(map[string]string),
 
-		baseURL: baseURL,
+		chainRegistryBaseUrl:     chainRegistryBaseUrl,
+		validatorRegistryBaseUrl: validatorRegistryBaseUrl,
 
 		log: log,
 	}
@@ -43,7 +52,7 @@ func NewChainRegistryClient(log *log.Logger, baseURL string) *chainRegistryClien
 // ChainRegistryClient interface
 
 func (rc *chainRegistryClient) ChainInfo(ctx context.Context, chainName string) (*ChainInfo, error) {
-	url := fmt.Sprintf("%s/v1/chain/%s", rc.baseURL, chainName)
+	url := fmt.Sprintf("%s/%s/chain.json", rc.chainRegistryBaseUrl, chainName)
 
 	bytes, err := rc.makeRequest(ctx, url)
 	if err != nil {
@@ -62,7 +71,7 @@ func (rc *chainRegistryClient) ChainInfo(ctx context.Context, chainName string) 
 }
 
 func (rc *chainRegistryClient) AssetList(ctx context.Context, chainName string) (*AssetList, error) {
-	url := fmt.Sprintf("%s/v1/chain/%s/assets", rc.baseURL, chainName)
+	url := fmt.Sprintf("%s/%s/assetlist.json", rc.chainRegistryBaseUrl, chainName)
 
 	bytes, err := rc.makeRequest(ctx, url)
 	if err != nil {
@@ -134,7 +143,7 @@ func (rc *chainRegistryClient) ChainNameForChainID(ctx context.Context, targetCh
 
 func (rc *chainRegistryClient) AllChainNames(ctx context.Context) ([]string, error) {
 	// Get all chain names
-	url := fmt.Sprintf("%s/v1/chains", rc.baseURL)
+	url := fmt.Sprintf("%s/all", rc.chainRegistryBaseUrl)
 	bytes, err := rc.makeRequest(ctx, url)
 	if err != nil {
 		return nil, err
@@ -149,29 +158,17 @@ func (rc *chainRegistryClient) AllChainNames(ctx context.Context) ([]string, err
 }
 
 func (rc *chainRegistryClient) Validator(ctx context.Context, targetValidator string) (*Validator, error) {
-	validators, err := rc.Validators(ctx)
+	url := fmt.Sprintf("%s/%s/chains.json", rc.validatorRegistryBaseUrl, targetValidator)
+	bytes, err := rc.makeRequest(ctx, url)
 	if err != nil {
 		return nil, err
 	}
 
-	validator, err := rc.extractValidator(targetValidator, validators)
+	response, err := parseValidator(bytes)
 	if err != nil {
 		return nil, err
 	}
-	return validator, nil
-}
-
-func (rc *chainRegistryClient) Validators(ctx context.Context) ([]Validator, error) {
-	bytes, err := rc.makeRequest(ctx, "https://validators.cosmos.directory/")
-	if err != nil {
-		return nil, err
-	}
-
-	response, err := parseValidatorRegistryResponse(bytes)
-	if err != nil {
-		return nil, err
-	}
-	return response.Validators, nil
+	return response, nil
 }
 
 // Private helpers
@@ -208,13 +205,4 @@ func (rc *chainRegistryClient) makeRequest(ctx context.Context, url string) ([]b
 
 		return nil, fmt.Errorf("received non-OK HTTP status: %d", resp.StatusCode)
 	}
-}
-
-func (rc *chainRegistryClient) extractValidator(targetValidator string, validators []Validator) (*Validator, error) {
-	for _, validator := range validators {
-		if strings.EqualFold(targetValidator, validator.Name) {
-			return &validator, nil
-		}
-	}
-	return nil, fmt.Errorf("unable to find a validator with name \"%s\"", targetValidator)
 }
