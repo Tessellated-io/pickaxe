@@ -18,6 +18,9 @@ type chainRegistryClient struct {
 	// Cache of chain names to chain ID
 	chainNameToChainID map[string]string
 
+	// Base url of an API service
+	baseURL string
+
 	log *log.Logger
 }
 
@@ -25,11 +28,13 @@ type chainRegistryClient struct {
 var _ ChainRegistryClient = (*chainRegistryClient)(nil)
 
 // NewRegistryClient makes a new default registry client.
-func NewChainRegistryClient(log *log.Logger) *chainRegistryClient {
+func NewChainRegistryClient(log *log.Logger, baseURL string) *chainRegistryClient {
 	return &chainRegistryClient{
 		// Initially empty chain name cache
 		chainNames:         []string{},
 		chainNameToChainID: make(map[string]string),
+
+		baseURL: baseURL,
 
 		log: log,
 	}
@@ -38,7 +43,7 @@ func NewChainRegistryClient(log *log.Logger) *chainRegistryClient {
 // ChainRegistryClient interface
 
 func (rc *chainRegistryClient) ChainInfo(ctx context.Context, chainName string) (*ChainInfo, error) {
-	url := fmt.Sprintf("https://proxy.atomscan.com/directory/%s/chain.json", chainName)
+	url := fmt.Sprintf("%s/v1/chain/%s", rc.baseURL, chainName)
 
 	bytes, err := rc.makeRequest(ctx, url)
 	if err != nil {
@@ -57,7 +62,7 @@ func (rc *chainRegistryClient) ChainInfo(ctx context.Context, chainName string) 
 }
 
 func (rc *chainRegistryClient) AssetList(ctx context.Context, chainName string) (*AssetList, error) {
-	url := fmt.Sprintf("https://proxy.atomscan.com/directory/%s/assetlist.json", chainName)
+	url := fmt.Sprintf("%s/v1/chain/%s/assets", rc.baseURL, chainName)
 
 	bytes, err := rc.makeRequest(ctx, url)
 	if err != nil {
@@ -129,7 +134,7 @@ func (rc *chainRegistryClient) ChainNameForChainID(ctx context.Context, targetCh
 
 func (rc *chainRegistryClient) AllChainNames(ctx context.Context) ([]string, error) {
 	// Get all chain names
-	url := "https://cosmoschains.thesilverfox.pro/api/v1/mainnet"
+	url := fmt.Sprintf("%s/v1/chains", rc.baseURL)
 	bytes, err := rc.makeRequest(ctx, url)
 	if err != nil {
 		return nil, err
@@ -178,6 +183,7 @@ func (rc *chainRegistryClient) makeRequest(ctx context.Context, url string) ([]b
 	if err != nil {
 		return nil, err
 	}
+	request.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
 	resp, err := client.Do(request)
