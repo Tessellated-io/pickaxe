@@ -36,7 +36,7 @@ type chainRegistryClient struct {
 var _ ChainRegistryClient = (*chainRegistryClient)(nil)
 
 // NewRegistryClient makes a new default registry client.
-func NewChainRegistryClient(log *log.Logger, chainRegistryBaseUrl string, validatorRegistryBaseUrl string) *chainRegistryClient {
+func NewChainRegistryClient(log *log.Logger, chainRegistryBaseUrl, validatorRegistryBaseUrl string) *chainRegistryClient {
 	return &chainRegistryClient{
 		// Initially empty chain name cache
 		chainNames:         []string{},
