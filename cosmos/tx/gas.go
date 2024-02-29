@@ -1,10 +1,14 @@
 package tx
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"sync"
+
+	"github.com/tessellated-io/pickaxe/log"
 
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 )
@@ -39,6 +43,8 @@ type GasPriceProvider interface {
 	HasGasFactor(chainName string) (bool, error)
 	GetGasFactor(chainName string) (float64, error)
 	SetGasFactor(chainName string, gasFactor float64) error
+
+	getGasData() (*GasData, error)
 }
 
 // InMemoryGasPriceProvider stores gas prices in memory.
@@ -117,6 +123,28 @@ func (gp *InMemoryGasPriceProvider) SetGasFactor(chainName string, gasFactor flo
 	return nil
 }
 
+func (gp *InMemoryGasPriceProvider) getGasData() (*GasData, error) {
+	gp.lock.Lock()
+	defer gp.lock.Unlock()
+
+	gasPrices := make(map[string]float64)
+	for chainName, price := range gp.prices {
+		gasPrices[chainName] = price
+	}
+
+	gasFactors := make(map[string]float64)
+	for chainName, factor := range gp.factors {
+		gasFactors[chainName] = factor
+	}
+
+	gasData := &GasData{
+		GasPrices:  gasPrices,
+		GasFactors: gasFactors,
+	}
+
+	return gasData, nil
+}
+
 // Helper function to know if an error had to do with gas.
 func IsGasRelatedError(codespace string, code uint32) bool {
 	return IsGasPriceError(codespace, code) || isGasAmountError(codespace, code)
@@ -148,4 +176,161 @@ func extractMinGlobalFee(errMsg string) (float64, error) {
 
 	}
 	return 0, fmt.Errorf("unrecognized error format")
+}
+
+// FileGasPriceProvider writes gas prices to a file by internally wrapping calls to an InMemoryGasPriceProvider.
+type FileGasPriceProvider struct {
+	wrapped GasPriceProvider
+
+	logger      *log.Logger
+	gasDataFile string
+
+	lock *sync.Mutex
+}
+
+// gasDataFile is the file name inside the data directory
+const gasDataFile = "gas_prices.json"
+
+// Assert all FileGasPriceProvider are GasPriceProviders
+var _ GasPriceProvider = (*FileGasPriceProvider)(nil)
+
+// Data format for gas file.
+type GasData struct {
+	GasFactors map[string]float64 `json:"gas_factors"`
+	GasPrices  map[string]float64 `json:"gas_prices"`
+}
+
+// Create a new FileGasProvider which will wrap an in-memory gas price provider
+func NewFileGasPriceProvider(logger *log.Logger, dataDirectory string) (GasPriceProvider, error) {
+	// Wrap an in memory provider, so that the logic is reused
+	// TODO: InMemoryGasPriceProvider should probably be renamed to BaseGasPriceProvider
+	wrapped, err := NewInMemoryGasPriceProvider()
+	if err != nil {
+		return nil, err
+	}
+
+	// Create a provider
+	gasDataFile := fmt.Sprintf("%s/%s", dataDirectory, gasDataFile)
+	provider := &FileGasPriceProvider{
+		wrapped:     wrapped,
+		logger:      logger,
+		gasDataFile: gasDataFile,
+		lock:        &sync.Mutex{},
+	}
+
+	// Initialize the wrapped provider.
+	err = provider.initialize()
+	if err != nil {
+		return nil, err
+	}
+
+	return provider, nil
+}
+
+func (p *FileGasPriceProvider) HasGasPrice(chainName string) (bool, error) {
+	return p.wrapped.HasGasPrice(chainName)
+}
+
+func (p *FileGasPriceProvider) GetGasPrice(chainName string) (float64, error) {
+	return p.wrapped.GetGasPrice(chainName)
+}
+
+func (p *FileGasPriceProvider) SetGasPrice(chainName string, gasPrice float64) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	err := p.wrapped.SetGasPrice(chainName, gasPrice)
+	if err != nil {
+		return err
+	}
+
+	return p.writeToFile()
+}
+
+func (p *FileGasPriceProvider) HasGasFactor(chainName string) (bool, error) {
+	return p.wrapped.HasGasFactor(chainName)
+}
+
+func (p *FileGasPriceProvider) GetGasFactor(chainName string) (float64, error) {
+	return p.wrapped.GetGasFactor(chainName)
+}
+
+func (p *FileGasPriceProvider) SetGasFactor(chainName string, gasFactor float64) error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	err := p.wrapped.SetGasFactor(chainName, gasFactor)
+	if err != nil {
+		return err
+	}
+
+	return p.writeToFile()
+}
+
+func (p *FileGasPriceProvider) getGasData() (*GasData, error) {
+	return p.wrapped.getGasData()
+}
+
+func (p *FileGasPriceProvider) writeToFile() error {
+	gasData, err := p.getGasData()
+	if err != nil {
+		return err
+	}
+
+	jsonBytes, err := json.MarshalIndent(gasData, "", "    ")
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(p.gasDataFile, jsonBytes, 0o600)
+	if err != nil {
+		return err
+	}
+
+	p.logger.Info().Str("file", p.gasDataFile).Msg("💾 saved gas prices to disk")
+	return nil
+}
+
+// Initialize the wrapped provider with data from a file.
+func (p *FileGasPriceProvider) initialize() error {
+	p.logger.Info().Str("file", p.gasDataFile).Msg("💾 initializing gas prices from disk")
+	gasData, err := p.loadData()
+	if err != nil {
+		return err
+	}
+
+	for chainName, gasFactor := range gasData.GasFactors {
+		err := p.wrapped.SetGasFactor(chainName, gasFactor)
+		if err != nil {
+			return err
+		}
+		p.logger.Debug().Str("chain_name", chainName).Float64("gas_factor", gasFactor).Msg("initialized gas factor")
+	}
+
+	for chainName, gasPrice := range gasData.GasPrices {
+		err := p.wrapped.SetGasPrice(chainName, gasPrice)
+		if err != nil {
+			return err
+		}
+		p.logger.Debug().Str("chain_name", chainName).Float64("gas_price", gasPrice).Msg("initialized gas price")
+	}
+
+	p.logger.Debug().Str("file", p.gasDataFile).Msg("gas price state initialization complete")
+	return nil
+}
+
+// Load data from the file
+func (p *FileGasPriceProvider) loadData() (*GasData, error) {
+	file, err := os.Open(p.gasDataFile)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var gasData *GasData
+	if err := json.NewDecoder(file).Decode(gasData); err != nil {
+		return nil, err
+	}
+
+	return gasData, nil
 }
