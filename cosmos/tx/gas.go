@@ -304,7 +304,7 @@ func (p *FileGasPriceProvider) initialize() error {
 		if err != nil {
 			return err
 		}
-		p.logger.Debug().Str("chain_name", chainName).Float64("gas_factor", gasFactor).Msg("initialized gas factor")
+		p.logger.Info().Str("chain_name", chainName).Float64("gas_factor", gasFactor).Msg("💾 initialized gas factor")
 	}
 
 	for chainName, gasPrice := range gasData.GasPrices {
@@ -312,10 +312,10 @@ func (p *FileGasPriceProvider) initialize() error {
 		if err != nil {
 			return err
 		}
-		p.logger.Debug().Str("chain_name", chainName).Float64("gas_price", gasPrice).Msg("initialized gas price")
+		p.logger.Info().Str("chain_name", chainName).Float64("gas_price", gasPrice).Msg("💾 initialized gas price")
 	}
 
-	p.logger.Debug().Str("file", p.gasDataFile).Msg("gas price state initialization complete")
+	p.logger.Info().Str("file", p.gasDataFile).Msg("gas price state initialization complete")
 	return nil
 }
 
