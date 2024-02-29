@@ -10,6 +10,9 @@ import (
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 )
 
+// Default gas factor to use
+const defaultGasFactor float64 = 1.1
+
 // Gas manager using exponential backoff.
 //
 // Rough algorithm:
@@ -107,8 +110,13 @@ func (gm *geometricGasManager) GetGasFactor(chainName string) (float64, error) {
 	// Attempt to get a gas factor, and return if successful.
 	gasFactor, err := gm.gasPriceProvider.GetGasFactor(chainName)
 	if err == ErrNoGasFactor {
-		gm.logger.Warn().Str("chain_name", chainName).Msg("no gas factor found for chain, setting gas factor to be 1.2")
-		return 1.2, nil
+		gm.logger.Warn().Str("chain_name", chainName).Float64("default_gas_factor", defaultGasFactor).Msg("no gas factor found for chain, initializing as default")
+		err := gm.gasPriceProvider.SetGasFactor(chainName, defaultGasFactor)
+		if err != nil {
+			gm.logger.Error().Err(err).Str("chain_name", chainName).Float64("default_gas_factor", defaultGasFactor).Msg("unable to set set default gas factor for chain. recovering by returning default gas factor")
+		}
+
+		return defaultGasFactor, nil
 	} else if err != nil {
 		return 0.0, err
 	}
