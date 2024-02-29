@@ -333,7 +333,7 @@ func (p *FileGasPriceProvider) loadData() (*GasData, error) {
 	}
 	defer file.Close()
 
-	var gasData *GasData
+	gasData := &GasData{}
 	if err := json.NewDecoder(file).Decode(gasData); err != nil {
 		return nil, err
 	}
