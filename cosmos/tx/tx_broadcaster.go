@@ -237,7 +237,7 @@ func (b *defaultBroadcaster) signAndBroadcast(ctx context.Context, msgs []sdk.Ms
 		codespace := result.TxResponse.Codespace
 		broadcastResponseCode := result.TxResponse.Code
 		logs := result.TxResponse.RawLog
-		b.logger.Info().Str("chain_name", b.chainName).Str("tx_hash", txHash).Uint32("code", broadcastResponseCode).Str("codespace", codespace).Str("logs", logs).Msg("📣 attempted to broadcast transaction")
+		b.logger.Info().Float64("gas_price", gasPrice).Float64("gas_factor", gasFactor).Str("chain_name", b.chainName).Str("tx_hash", txHash).Uint32("code", broadcastResponseCode).Str("codespace", codespace).Str("logs", logs).Msg("📣 attempted to broadcast transaction")
 	}
 
 	// Broadcast response helpfully sets `gasWanted` to zero if the transaction failed, which is a bit of a pain, especially if we want to get
@@ -263,13 +263,15 @@ func (b *defaultBroadcaster) checkTxStatus(ctx context.Context, txHash string) (
 		codespace := txStatus.TxResponse.Codespace
 		broadcastResponseCode := txStatus.TxResponse.Code
 		logs := txStatus.TxResponse.RawLog
-		b.logger.Info().Str("chain_name", b.chainName).Str("tx_hash", txHash).Uint32("code", broadcastResponseCode).Str("codespace", codespace).Str("logs", logs).Msg("got a settled tx status")
+		b.logger.Info().Str("chain_name", b.chainName).Str("tx_hash", txHash).Uint32("code", broadcastResponseCode).Str("codespace", codespace).Msg("got a settled tx status")
+		b.logger.Debug().Str("chain_name", b.chainName).Str("tx_hash", txHash).Uint32("code", broadcastResponseCode).Str("codespace", codespace).Str("logs", logs).Msg("logging full tx logs")
 
 		return txStatus, nil
 	}
 
 	grpcErr, ok := status.FromError(err)
 	if ok && grpcErr.Code() == codes.NotFound {
+
 		// No error, but nothing was found
 		b.logger.Debug().Str("chain_name", b.chainName).Str("tx_hash", txHash).Msg("tx not included in chain")
 		return nil, nil
@@ -497,7 +499,6 @@ func (b *retryableTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []sd
 		// Otherwise, poll and wait.
 		b.logger.Error().Err(err).Uint("attempt", i+1).Uint("max_attempts", b.attempts).Msg("failed to sign and broadcast, will retry.")
 		time.Sleep(b.delay)
-
 	}
 	panic("retryable_tx_broadcaster::sign_and_broadcast::should never happen")
 }

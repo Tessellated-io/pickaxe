@@ -304,7 +304,7 @@ func (p *FileGasPriceProvider) initialize() error {
 		if err != nil {
 			return err
 		}
-		p.logger.Debug().Str("chain_name", chainName).Float64("gas_factor", gasFactor).Msg("initialized gas factor")
+		p.logger.Info().Str("chain_name", chainName).Float64("gas_factor", gasFactor).Msg("💾 initialized gas factor")
 	}
 
 	for chainName, gasPrice := range gasData.GasPrices {
@@ -312,22 +312,28 @@ func (p *FileGasPriceProvider) initialize() error {
 		if err != nil {
 			return err
 		}
-		p.logger.Debug().Str("chain_name", chainName).Float64("gas_price", gasPrice).Msg("initialized gas price")
+		p.logger.Info().Str("chain_name", chainName).Float64("gas_price", gasPrice).Msg("💾 initialized gas price")
 	}
 
-	p.logger.Debug().Str("file", p.gasDataFile).Msg("gas price state initialization complete")
+	p.logger.Info().Str("file", p.gasDataFile).Msg("gas price state initialization complete")
 	return nil
 }
 
 // Load data from the file
 func (p *FileGasPriceProvider) loadData() (*GasData, error) {
+	_, err := os.Stat(p.gasDataFile)
+	if os.IsNotExist(err) {
+		p.logger.Info().Str("file", p.gasDataFile).Msg("💾 no gas price cache found on disk. will not initialize.")
+		return &GasData{}, nil
+	}
+
 	file, err := os.Open(p.gasDataFile)
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	var gasData *GasData
+	gasData := &GasData{}
 	if err := json.NewDecoder(file).Decode(gasData); err != nil {
 		return nil, err
 	}
