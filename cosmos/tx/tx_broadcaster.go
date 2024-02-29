@@ -499,7 +499,6 @@ func (b *retryableTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []sd
 		// Otherwise, poll and wait.
 		b.logger.Error().Err(err).Uint("attempt", i+1).Uint("max_attempts", b.attempts).Msg("failed to sign and broadcast, will retry.")
 		time.Sleep(b.delay)
-
 	}
 	panic("retryable_tx_broadcaster::sign_and_broadcast::should never happen")
 }
