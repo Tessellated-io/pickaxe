@@ -264,7 +264,7 @@ func (b *defaultBroadcaster) checkTxStatus(ctx context.Context, txHash string) (
 		broadcastResponseCode := txStatus.TxResponse.Code
 		logs := txStatus.TxResponse.RawLog
 		b.logger.Info().Str("chain_name", b.chainName).Str("tx_hash", txHash).Uint32("code", broadcastResponseCode).Str("codespace", codespace).Msg("got a settled tx status")
-		b.logger.Info().Str("chain_name", b.chainName).Str("tx_hash", txHash).Uint32("code", broadcastResponseCode).Str("codespace", codespace).Str("logs", logs).Msg("logging full tx logs")
+		b.logger.Debug().Str("chain_name", b.chainName).Str("tx_hash", txHash).Uint32("code", broadcastResponseCode).Str("codespace", codespace).Str("logs", logs).Msg("logging full tx logs")
 
 		return txStatus, nil
 	}
