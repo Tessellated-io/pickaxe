@@ -51,7 +51,7 @@ func NewGeometricGasManager(
 	if scaleFactor < 0 || scaleFactor >= 1 {
 		return nil, fmt.Errorf("invalid scale factor: %f. Must conform to: 0 < scale_factor < 1", scaleFactor)
 	}
-	gasLogger := logger.ApplyPrefix(" ⛽️")
+	gasLogger := logger.ApplyPrefix("⛽️")
 
 	lock := &sync.Mutex{}
 
