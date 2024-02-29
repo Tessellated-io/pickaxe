@@ -2,22 +2,15 @@ package util
 
 import "fmt"
 
-// Returns an error that represents a panic, if there was a panic. Otherwise, returns nil.
-func ErrorFromRecovery() error {
-	// Attempt recovery and ditch if there's nothing to recover from.
-	recovered := recover()
-	if recovered == nil {
-		return nil
-	}
-
+func InterfaceToError(errorInterface interface{}) error {
 	// Attempt to coerce into error
-	err, ok := recovered.(error)
+	err, ok := errorInterface.(error)
 	if ok {
 		return err
 	}
 
 	// Otherwise attempt to coerce into string
-	stringifiedErr, ok := recovered.(string)
+	stringifiedErr, ok := errorInterface.(string)
 	if ok {
 		return fmt.Errorf(stringifiedErr)
 	}
