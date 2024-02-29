@@ -321,6 +321,12 @@ func (p *FileGasPriceProvider) initialize() error {
 
 // Load data from the file
 func (p *FileGasPriceProvider) loadData() (*GasData, error) {
+	_, err := os.Stat(p.gasDataFile)
+	if os.IsNotExist(err) {
+		p.logger.Info().Str("file", p.gasDataFile).Msg("💾 no gas price cache found on disk. will not initialize.")
+		return &GasData{}, nil
+	}
+
 	file, err := os.Open(p.gasDataFile)
 	if err != nil {
 		return nil, err
