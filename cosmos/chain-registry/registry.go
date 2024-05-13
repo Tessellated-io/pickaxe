@@ -122,11 +122,13 @@ func (rc *chainRegistryClient) ChainNameForChainID(ctx context.Context, targetCh
 			chainInfo, err := rc.ChainInfo(ctx, chainName)
 			if err != nil {
 				rc.log.Warn().Err(err).Str("chain_name", chainName).Msg("error fetching chain information during chain id refresh, this chain will not be supported")
-			}
+			} else {
+
 			chainID = chainInfo.ChainID
 
 			// Set in cache
-			rc.chainNameToChainID[chainName] = chainID
+				rc.chainNameToChainID[chainName] = chainID
+			}
 		} else {
 			rc.log.Debug().Str("chain_name", chainName).Msg("found chain id in cache")
 		}
