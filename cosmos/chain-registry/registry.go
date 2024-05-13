@@ -121,10 +121,8 @@ func (rc *chainRegistryClient) ChainNameForChainID(ctx context.Context, targetCh
 			// NOTE: No retries because GetChainInfo manages that for us.
 			chainInfo, err := rc.ChainInfo(ctx, chainName)
 			if err != nil {
-				rc.log.Error().Err(err).Str("chain_name", chainName).Msg("error fetching chain information during chain id refresh")
-				return "", err
+				rc.log.Warn().Err(err).Str("chain_name", chainName).Msg("error fetching chain information during chain id refresh, this chain will not be supported")
 			}
-
 			chainID = chainInfo.ChainID
 
 			// Set in cache
