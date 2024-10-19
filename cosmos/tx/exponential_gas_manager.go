@@ -2,10 +2,9 @@ package tx
 
 import (
 	"fmt"
+	"log/slog"
 	"math"
 	"sync"
-
-	"github.com/tessellated-io/pickaxe/log"
 
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 )
@@ -39,7 +38,7 @@ type geometricGasManager struct {
 
 	// Core Services
 	gasPriceProvider GasPriceProvider
-	logger           *log.Logger
+	logger           *slog.Logger
 }
 
 var _ GasManager = (*geometricGasManager)(nil)
@@ -49,7 +48,7 @@ func NewGeometricGasManager(
 	maxStepSize float64,
 	scaleFactor float64,
 	gasPriceProvider GasPriceProvider,
-	logger *log.Logger,
+	logger *slog.Logger,
 ) (GasManager, error) {
 	if scaleFactor < 0 || scaleFactor >= 1 {
 		return nil, fmt.Errorf("invalid scale factor: %f. Must conform to: 0 < scale_factor < 1", scaleFactor)
@@ -86,7 +85,7 @@ func (g *geometricGasManager) InitializePrice(chainName string, gasPrice float64
 	}
 
 	if hasPrice {
-		g.logger.Warn().Str("chain_name", chainName).Msg("requested initialization of previously initialized price. this is a no-op.")
+		g.logger.Warn("requested initialization of previously initialized price. this is a no-op.", "chain_name", chainName)
 		return nil
 	}
 
@@ -98,7 +97,7 @@ func (g *geometricGasManager) GetGasPrice(chainName string) (float64, error) {
 	// Attempt to get a gas price, and return if successful.
 	gasPrice, err := g.gasPriceProvider.GetGasPrice(chainName)
 	if err == ErrNoGasPrice {
-		g.logger.Warn().Str("chain_name", chainName).Msg("no gas price found for chain, setting gas to be zero")
+		g.logger.Warn("no gas price found for chain, setting gas to be zero", "chain_name", chainName)
 		return 0, nil
 	} else if err != nil {
 		return 0, err
@@ -107,13 +106,15 @@ func (g *geometricGasManager) GetGasPrice(chainName string) (float64, error) {
 }
 
 func (gm *geometricGasManager) GetGasFactor(chainName string) (float64, error) {
+	logger := gm.logger.With("chain_name", chainName, "default_gas_factor", defaultGasFactor)
+
 	// Attempt to get a gas factor, and return if successful.
 	gasFactor, err := gm.gasPriceProvider.GetGasFactor(chainName)
 	if err == ErrNoGasFactor {
-		gm.logger.Warn().Str("chain_name", chainName).Float64("default_gas_factor", defaultGasFactor).Msg("no gas factor found for chain, initializing as default")
+		logger.Warn("no gas factor found for chain, initializing as default")
 		err := gm.gasPriceProvider.SetGasFactor(chainName, defaultGasFactor)
 		if err != nil {
-			gm.logger.Error().Err(err).Str("chain_name", chainName).Float64("default_gas_factor", defaultGasFactor).Msg("unable to set set default gas factor for chain. recovering by returning default gas factor")
+			logger.Error("unable to set set default gas factor for chain. recovering by returning default gas factor", "error", err.Error())
 		}
 
 		return defaultGasFactor, nil
@@ -151,7 +152,7 @@ func (g *geometricGasManager) ManageFailingBroadcastResult(chainName string, bro
 	}
 
 	if isSuccess {
-		g.logger.Warn().Str("chain_name", chainName).Msg("tx broadcast result was successful, but asked gas manager to track a failure.")
+		g.logger.Warn("tx broadcast result was successful, but asked gas manager to track a failure", "chain_name", chainName)
 		return nil
 	}
 
@@ -191,9 +192,11 @@ func (g *geometricGasManager) ManageInclusionFailure(chainName string) error {
 // Helpers - state tracking
 
 func (g *geometricGasManager) trackFailingCodeAndCodespace(code uint32, codespace, chainName, logs string, gasWanted uint) error {
+	logger := g.logger.With("chain_name", chainName, "code", code, "codespace", codespace, "logs", logs)
+
 	// 2. If the code was not a gas error, then it is non-deterministic, so do nothing.
 	if !IsGasRelatedError(codespace, code) {
-		g.logger.Info().Str("chain_name", chainName).Uint32("code", code).Str("logs", logs).Str("codespace", codespace).Msg("broadcast result was unrelated to gas. not adjusting gas prices or gas factor")
+		logger.Info("broadcast result was unrelated to gas. not adjusting gas prices or gas factor")
 		return nil
 	}
 
@@ -225,7 +228,7 @@ func (g *geometricGasManager) trackFailingCodeAndCodespace(code uint32, codespac
 			if err != nil {
 				return err
 			}
-			g.logger.Info().Str("chain_name", chainName).Float64("new_gas_price", newGasPrice).Float64("old_gas_price", oldGasPrice).Str("logs", logs).Msg("calculated exact price from chain suggestion")
+			logger.Info("calculated exact price from chain suggestion", "old_gas_price", oldGasPrice, "new_gas_price", newGasPrice)
 		}
 		return nil
 	} else if isGasAmountError(codespace, code) {
@@ -363,12 +366,14 @@ func (g *geometricGasManager) adjustFactor(chainName string, successes, failures
 		return err
 	}
 
-	g.logger.Info().Str("chain_name", chainName).Float64("old_gas_factor", oldFactor).Int("consecutive_successes", successes).Int("consecutive_failures", failures).Float64("new_gas_factor", newFactor).Msg("adjusted gas factor in response to feedback")
+	g.logger.Info("adjusted gas factor in response to feedback", "chain_name", chainName, "old_gas_factor", oldFactor, "consecutive_successes", successes, "consecutive_failures", failures, "new_gas_factor", newFactor)
 	return nil
 }
 
 // TODO: Theoretically this could just be injected to allow generalization. That feels over-optimizey for now.
 func (g *geometricGasManager) adjustPrice(chainName string, successes, failures int) error {
+	logger := g.logger.With("max_step_size", g.maxStepSize)
+
 	// Do nothing if we don't have a failure or a consecutive success
 	successThreshold := 5
 	if failures == 0 && successes < 5 {
@@ -386,9 +391,10 @@ func (g *geometricGasManager) adjustPrice(chainName string, successes, failures 
 		// Failures increasing. Scale price up according to consecutive failures
 		scale := math.Pow((1 + g.scaleFactor), float64(failures))
 		scaledStepSize := g.stepSize * scale
+		logger = logger.With("desired_step_size", scaledStepSize)
 
 		if scaledStepSize > g.maxStepSize {
-			g.logger.Warn().Float64("desired_step_size", scaledStepSize).Float64("max_step_size", g.maxStepSize).Msg("bounding step size")
+			logger.Warn("bounding step size")
 			scaledStepSize = g.maxStepSize
 		}
 
@@ -405,7 +411,7 @@ func (g *geometricGasManager) adjustPrice(chainName string, successes, failures 
 		scaledStepSize := g.stepSize * scale
 
 		if scaledStepSize > g.maxStepSize {
-			g.logger.Warn().Float64("desired_step_size", scaledStepSize).Float64("max_step_size", g.maxStepSize).Msg("bounding step size")
+			logger.Warn("bounding step size")
 			scaledStepSize = g.maxStepSize
 		}
 
@@ -420,6 +426,6 @@ func (g *geometricGasManager) adjustPrice(chainName string, successes, failures 
 		return err
 	}
 
-	g.logger.Info().Str("chain_name", chainName).Float64("old_gas_price", oldPrice).Int("consecutive_successes", successes).Int("consecutive_failures", failures).Float64("new_gas_price", newPrice).Msg("adjusted gas price in response to feedback")
+	g.logger.Info("adjusted gas price in response to feedback", "chain_name", chainName, "old_gas_price", oldPrice, "consecutive_successes", "consecutive_failures", failures, "new_gas_price", newPrice)
 	return nil
 }

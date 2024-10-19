@@ -2,12 +2,12 @@ package config
 
 import (
 	"fmt"
+	"log/slog"
 	os2 "os"
 	"os/user"
 	"strings"
 
 	"github.com/cometbft/cometbft/libs/os"
-	"github.com/tessellated-io/pickaxe/log"
 )
 
 // normalizeConfigFile loads a config file from a short path (ex. ~/.restake/config.yml => /home/tessellated/.restake/config.yml)
@@ -20,8 +20,10 @@ func ReadFile(configFile string) (string, error) {
 	return expandedConfigFile, nil
 }
 
-func CreateDirectoryIfNeeded(configurationDirectory string, logger *log.Logger) error {
+func CreateDirectoryIfNeeded(configurationDirectory string, logger *slog.Logger) error {
 	expanded := ExpandHomeDir(configurationDirectory)
+	logger = logger.With("dir", expanded)
+
 	exists, err := folderExists(expanded)
 	if err != nil {
 		return err
@@ -36,15 +38,17 @@ func CreateDirectoryIfNeeded(configurationDirectory string, logger *log.Logger) 
 		return err
 	}
 
-	logger.Info().Str("configuration_dir", configurationDirectory).Msg("created configuration directory")
+	logger.Info("created configuration directory")
 
 	return nil
 }
 
-func SafeWrite(file string, contents []byte, logger *log.Logger) error {
+func SafeWrite(file string, contents []byte, logger *slog.Logger) error {
 	expanded := ExpandHomeDir(file)
+	logger = logger.With("file", expanded)
+
 	if os.FileExists(expanded) {
-		logger.Warn().Str("file", expanded).Msg("skipping overwriting existing file")
+		logger.Warn("skipping overwriting existing file")
 		return nil
 	}
 
@@ -52,7 +56,7 @@ func SafeWrite(file string, contents []byte, logger *log.Logger) error {
 	if err != nil {
 		return err
 	}
-	logger.Info().Str("file", expanded).Msg("wrote file")
+	logger.Info("wrote file")
 	return nil
 }
 

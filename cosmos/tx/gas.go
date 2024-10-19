@@ -3,12 +3,11 @@ package tx
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"strconv"
 	"sync"
-
-	"github.com/tessellated-io/pickaxe/log"
 
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 )
@@ -182,7 +181,7 @@ func extractMinGlobalFee(errMsg string) (float64, error) {
 type FileGasPriceProvider struct {
 	wrapped GasPriceProvider
 
-	logger      *log.Logger
+	logger      *slog.Logger
 	gasDataFile string
 
 	lock *sync.Mutex
@@ -201,7 +200,7 @@ type GasData struct {
 }
 
 // Create a new FileGasProvider which will wrap an in-memory gas price provider
-func NewFileGasPriceProvider(logger *log.Logger, dataDirectory string) (GasPriceProvider, error) {
+func NewFileGasPriceProvider(logger *slog.Logger, dataDirectory string) (GasPriceProvider, error) {
 	// Wrap an in memory provider, so that the logic is reused
 	// TODO: InMemoryGasPriceProvider should probably be renamed to BaseGasPriceProvider
 	wrapped, err := NewInMemoryGasPriceProvider()
@@ -287,13 +286,15 @@ func (p *FileGasPriceProvider) writeToFile() error {
 		return err
 	}
 
-	p.logger.Info().Str("file", p.gasDataFile).Msg("💾 saved gas prices to disk")
+	p.logger.Info("💾 saved gas prices to disk", "file", p.gasDataFile)
 	return nil
 }
 
 // Initialize the wrapped provider with data from a file.
 func (p *FileGasPriceProvider) initialize() error {
-	p.logger.Info().Str("file", p.gasDataFile).Msg("💾 initializing gas prices from disk")
+	logger := p.logger.With("file", p.gasDataFile)
+
+	logger.Info("💾 initializing gas prices from disk")
 	gasData, err := p.loadData()
 	if err != nil {
 		return err
@@ -304,7 +305,7 @@ func (p *FileGasPriceProvider) initialize() error {
 		if err != nil {
 			return err
 		}
-		p.logger.Info().Str("chain_name", chainName).Float64("gas_factor", gasFactor).Msg("💾 initialized gas factor")
+		logger.Info("💾 initialized gas factor", "gas_factor", gasFactor, "chain_name", chainName)
 	}
 
 	for chainName, gasPrice := range gasData.GasPrices {
@@ -312,10 +313,10 @@ func (p *FileGasPriceProvider) initialize() error {
 		if err != nil {
 			return err
 		}
-		p.logger.Info().Str("chain_name", chainName).Float64("gas_price", gasPrice).Msg("💾 initialized gas price")
+		logger.Info("💾 initialized gas price", "gas_price", gasPrice, "chain_name", chainName)
 	}
 
-	p.logger.Info().Str("file", p.gasDataFile).Msg("gas price state initialization complete")
+	logger.Info("gas price state initialization complete")
 	return nil
 }
 
@@ -323,7 +324,7 @@ func (p *FileGasPriceProvider) initialize() error {
 func (p *FileGasPriceProvider) loadData() (*GasData, error) {
 	_, err := os.Stat(p.gasDataFile)
 	if os.IsNotExist(err) {
-		p.logger.Info().Str("file", p.gasDataFile).Msg("💾 no gas price cache found on disk. will not initialize.")
+		p.logger.Info("💾 no gas price cache found on disk. will not initialize", "file", p.gasDataFile)
 		return &GasData{}, nil
 	}
 

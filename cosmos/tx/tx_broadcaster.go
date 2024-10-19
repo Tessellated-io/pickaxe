@@ -3,11 +3,11 @@ package tx
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/tessellated-io/pickaxe/cosmos/rpc"
 	"github.com/tessellated-io/pickaxe/crypto"
-	"github.com/tessellated-io/pickaxe/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -18,7 +18,7 @@ import (
 // Broadcaster wraps TxBroadcaster. You probably just want to use NewDefaultBroadcaster.
 
 type Broadcaster struct {
-	logger  *log.Logger
+	logger  *slog.Logger
 	wrapped TxBroadcaster
 }
 
@@ -28,7 +28,7 @@ func NewDefaultBroadcaster(
 	bech32Prefix string,
 	signer crypto.BytesSigner,
 	gasManager GasManager,
-	logger *log.Logger,
+	logger *slog.Logger,
 	rpcClient rpc.RpcClient,
 	signingMetadataProvider *SigningMetadataProvider,
 	txProvider TxProvider,
@@ -164,7 +164,7 @@ type defaultBroadcaster struct {
 
 	// Services
 	gasManager              GasManager
-	logger                  *log.Logger
+	logger                  *slog.Logger
 	rpcClient               rpc.RpcClient
 	signingMetadataProvider *SigningMetadataProvider
 	txProvider              TxProvider
@@ -177,7 +177,7 @@ func NewDefaultTxBroadcaster(
 	bech32Prefix string,
 	signer crypto.BytesSigner,
 	gasManager GasManager,
-	logger *log.Logger,
+	logger *slog.Logger,
 	rpcClient rpc.RpcClient,
 	signingMetadataProvider *SigningMetadataProvider,
 	txProvider TxProvider,
@@ -288,7 +288,7 @@ type pollingTxBroadcaster struct {
 	delay    time.Duration
 
 	// Services
-	logger             *log.Logger
+	logger             *slog.Logger
 	wrappedBroadcaster TxBroadcaster
 }
 
@@ -297,7 +297,7 @@ var _ TxBroadcaster = (*pollingTxBroadcaster)(nil)
 func NewPollingTxBroadcaster(
 	attempts uint,
 	delay time.Duration,
-	logger *log.Logger,
+	logger *slog.Logger,
 	wrappedBroadcaster TxBroadcaster,
 ) (TxBroadcaster, error) {
 	broadcaster := &pollingTxBroadcaster{
@@ -363,7 +363,7 @@ type gasTrackingTxBroadcaster struct {
 
 	// Services
 	gasManager         GasManager
-	logger             *log.Logger
+	logger             *slog.Logger
 	wrappedBroadcaster TxBroadcaster
 }
 
@@ -372,7 +372,7 @@ var _ TxBroadcaster = (*gasTrackingTxBroadcaster)(nil)
 func NewGasTrackingTxBroadcaster(
 	chainName string,
 	gasManager GasManager,
-	logger *log.Logger,
+	logger *slog.Logger,
 	wrappedBroadcaster TxBroadcaster,
 ) (TxBroadcaster, error) {
 	broadcaster := &gasTrackingTxBroadcaster{
@@ -453,7 +453,7 @@ type retryableTxBroadcaster struct {
 	delay    time.Duration
 
 	// Services
-	logger             *log.Logger
+	logger             *slog.Logger
 	wrappedBroadcaster TxBroadcaster
 }
 
@@ -462,7 +462,7 @@ var _ TxBroadcaster = (*retryableTxBroadcaster)(nil)
 func NewRetryableBroadcaster(
 	attempts uint,
 	delay time.Duration,
-	logger *log.Logger,
+	logger *slog.Logger,
 	wrappedBroadcaster TxBroadcaster,
 ) (TxBroadcaster, error) {
 	broadcaster := &retryableTxBroadcaster{

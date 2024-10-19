@@ -2,9 +2,9 @@ package tx
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/tessellated-io/pickaxe/crypto"
-	"github.com/tessellated-io/pickaxe/log"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	cosmostx "github.com/cosmos/cosmos-sdk/client/tx"
@@ -23,7 +23,7 @@ type txProvider struct {
 	feeDenom    string
 	memo        string
 
-	logger            *log.Logger
+	logger            *slog.Logger
 	simulationManager SimulationManager
 
 	txConfig  client.TxConfig
@@ -33,7 +33,7 @@ type txProvider struct {
 // Assert type conformance
 var _ TxProvider = (*txProvider)(nil)
 
-func NewTxProvider(bytesSigner crypto.BytesSigner, chainID, feeDenom, memo string, logger *log.Logger, simulationManager SimulationManager, txConfig client.TxConfig) (TxProvider, error) {
+func NewTxProvider(bytesSigner crypto.BytesSigner, chainID, feeDenom, memo string, logger *slog.Logger, simulationManager SimulationManager, txConfig client.TxConfig) (TxProvider, error) {
 	txFactory := cosmostx.Factory{}.WithChainID(chainID).WithTxConfig(txConfig)
 
 	return &txProvider{

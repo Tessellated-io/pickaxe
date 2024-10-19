@@ -4,10 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
-
-	"github.com/tessellated-io/pickaxe/log"
 )
 
 /**
@@ -29,14 +28,14 @@ type chainRegistryClient struct {
 	chainRegistryBaseUrl     string
 	validatorRegistryBaseUrl string
 
-	log *log.Logger
+	log *slog.Logger
 }
 
 // Type assertion
 var _ ChainRegistryClient = (*chainRegistryClient)(nil)
 
 // NewRegistryClient makes a new default registry client.
-func NewChainRegistryClient(log *log.Logger, chainRegistryBaseUrl, validatorRegistryBaseUrl string) *chainRegistryClient {
+func NewChainRegistryClient(log *slog.Logger, chainRegistryBaseUrl, validatorRegistryBaseUrl string) *chainRegistryClient {
 	return &chainRegistryClient{
 		// Initially empty chain name cache
 		chainNames:         []string{},
@@ -90,13 +89,13 @@ func (rc *chainRegistryClient) ChainNameForChainID(ctx context.Context, targetCh
 	if refreshCache {
 		rc.chainNames = []string{}
 		rc.chainNameToChainID = make(map[string]string)
-		rc.log.Debug().Msg("reset chain names and chain ids caches per client request")
+		rc.log.Debug("reset chain names and chain ids caches per client request")
 	}
 
 	// Fetch chain names if they are not cached, or if we requested a refetch from the cache
 	chainNames := rc.chainNames
 	if len(chainNames) == 0 {
-		rc.log.Debug().Msg("no index of chain names, reloading from registry")
+		rc.log.Debug("no index of chain names, reloading from registry")
 
 		var err error
 		chainNames, err = rc.AllChainNames(ctx)
@@ -104,24 +103,25 @@ func (rc *chainRegistryClient) ChainNameForChainID(ctx context.Context, targetCh
 			return "", err
 		}
 
-		rc.log.Debug().Int("num_chains", len(chainNames)).Msg("loaded chains from the registry")
+		rc.log.Debug("loaded chains from the registry", "num_chains", len(chainNames))
 		rc.chainNames = chainNames
-		rc.log.Debug().Int("num_chains", len(rc.chainNames)).Msg("updated chain name index in client")
+		rc.log.Debug("updated chain name index in client", "num_chains", len(rc.chainNames))
 	}
 
 	// For each chain name, get the chain id from the cache or from fetching
 	for chainIdx, chainName := range chainNames {
-		rc.log.Debug().Str("chain_name", chainName).Int("chain_index", chainIdx).Msg("processing chain")
+		logger := rc.log.With("chain_name ", chainName)
+		logger.Debug("processing chain", "chain_index", chainIdx)
 
 		chainID, isSet := rc.chainNameToChainID[chainName]
 		if !isSet {
-			rc.log.Debug().Str("chain_name", chainName).Msg("no chain data found in cache, requesting from registry")
+			logger.Debug("no chain data found in cache, requesting from registry")
 
 			// Fetch the chain ID for the chain
 			// NOTE: No retries because GetChainInfo manages that for us.
 			chainInfo, err := rc.ChainInfo(ctx, chainName)
 			if err != nil {
-				rc.log.Warn().Err(err).Str("chain_name", chainName).Msg("error fetching chain information during chain id refresh, this chain will not be supported")
+				logger.Warn("error fetching chain information during chain id refresh, this chain will not be supported")
 			} else {
 
 				chainID = chainInfo.ChainID
@@ -130,7 +130,7 @@ func (rc *chainRegistryClient) ChainNameForChainID(ctx context.Context, targetCh
 				rc.chainNameToChainID[chainName] = chainID
 			}
 		} else {
-			rc.log.Debug().Str("chain_name", chainName).Msg("found chain id in cache")
+			logger.Debug("found chain id in cache")
 		}
 
 		if strings.EqualFold(targetChainID, chainID) {
@@ -174,7 +174,7 @@ func (rc *chainRegistryClient) Validator(ctx context.Context, targetValidator st
 // Private helpers
 
 func (rc *chainRegistryClient) makeRequest(ctx context.Context, url string) ([]byte, error) {
-	rc.log.Debug().Str("url", url).Msg("making GET request to url")
+	rc.log.Debug("making GET request to url", "url", url)
 
 	request, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
@@ -194,13 +194,13 @@ func (rc *chainRegistryClient) makeRequest(ctx context.Context, url string) ([]b
 		if err != nil {
 			return nil, err
 		}
-		rc.log.Debug().Msg("received http 200 response from chain registry")
+		rc.log.Debug("received http 200 response from chain registry")
 
 		return data, nil
 	} else {
 		data, err := io.ReadAll(resp.Body)
 		if err == nil {
-			rc.log.Debug().Str("response", string(data)).Int("status_code", resp.StatusCode).Msg("received bad response from chain registry")
+			rc.log.Debug("received bad response from chain registry", "response", string(data), "status_code", resp.StatusCode)
 		}
 
 		return nil, fmt.Errorf("received non-OK HTTP status: %d", resp.StatusCode)
