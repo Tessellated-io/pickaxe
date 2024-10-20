@@ -427,6 +427,6 @@ func (g *geometricGasManager) adjustPrice(chainName string, successes, failures 
 		return err
 	}
 
-	g.logger.Info("adjusted gas price in response to feedback", "chain_name", chainName, "old_gas_price", oldPrice, "consecutive_successes", "consecutive_failures", failures, "new_gas_price", newPrice)
+	g.logger.Info("adjusted gas price in response to feedback", "chain_name", chainName, "old_gas_price", oldPrice, "consecutive_successes", successes, "consecutive_failures", failures, "new_gas_price", newPrice)
 	return nil
 }

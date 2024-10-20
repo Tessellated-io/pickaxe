@@ -121,7 +121,7 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 			codespace := txStatus.TxResponse.Codespace
 			code := txStatus.TxResponse.Code
 			if IsGasRelatedError(codespace, code) {
-				logger.Error("transaction landed on chain but failed due to gas, will retry", "error", fmt.Errorf("detected gas error in broadcast: %s", txStatus.TxResponse.RawLog), txStatus.TxResponse.RawLog)
+				logger.Error("transaction landed on chain but failed due to gas, will retry", "error", fmt.Errorf("detected gas error in broadcast: %s", txStatus.TxResponse.RawLog))
 
 				continue
 			}

@@ -4,9 +4,8 @@ import (
 	"os"
 	"strings"
 
-	"log/slog"
-
 	"github.com/dpotapov/slogpfx"
+	"log/slog"
 )
 
 // Logger is a wrapper around a slog.logger, which keeps track of prefixes and raw keys,
