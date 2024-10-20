@@ -3,12 +3,12 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"strings"
 
 	"github.com/tessellated-io/pickaxe/arrays"
 	"github.com/tessellated-io/pickaxe/cosmos/util"
 	"github.com/tessellated-io/pickaxe/grpc"
+	"github.com/tessellated-io/pickaxe/log"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -35,7 +35,7 @@ type grpcClient struct {
 	stakingClient      stakingtypes.QueryClient
 	txClient           txtypes.ServiceClient
 
-	log *slog.Logger
+	log *log.Logger
 }
 
 // A struct that came back from an RPC query
@@ -48,7 +48,7 @@ type paginatedRpcResponse[dataType any] struct {
 var _ RpcClient = (*grpcClient)(nil)
 
 // NewRpcClient makes a new RpcClient.
-func NewGrpcClient(nodeGrpcUri string, cdc *codec.ProtoCodec, log *slog.Logger) (RpcClient, error) {
+func NewGrpcClient(nodeGrpcUri string, cdc *codec.ProtoCodec, log *log.Logger) (RpcClient, error) {
 	conn, err := grpc.GetGrpcConnection(nodeGrpcUri)
 	if err != nil {
 		log.Error("Unable to connect to gRPC", "grpc_url", nodeGrpcUri)

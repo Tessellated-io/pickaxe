@@ -1,14 +1,14 @@
 package config
 
 import (
-	"log/slog"
 	"reflect"
 	"strings"
 
+	"github.com/tessellated-io/pickaxe/log"
 	"gopkg.in/yaml.v2"
 )
 
-func WriteYamlWithComments(config interface{}, header, filename string, logger *slog.Logger) error {
+func WriteYamlWithComments(config interface{}, header, filename string, logger *log.Logger) error {
 	fileData, err := addCommentsToYaml(config, header)
 	if err != nil {
 		return err

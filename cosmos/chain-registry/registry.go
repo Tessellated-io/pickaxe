@@ -4,9 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"strings"
+
+	"github.com/tessellated-io/pickaxe/log"
 )
 
 /**
@@ -28,14 +29,14 @@ type chainRegistryClient struct {
 	chainRegistryBaseUrl     string
 	validatorRegistryBaseUrl string
 
-	log *slog.Logger
+	log *log.Logger
 }
 
 // Type assertion
 var _ ChainRegistryClient = (*chainRegistryClient)(nil)
 
 // NewRegistryClient makes a new default registry client.
-func NewChainRegistryClient(log *slog.Logger, chainRegistryBaseUrl, validatorRegistryBaseUrl string) *chainRegistryClient {
+func NewChainRegistryClient(log *log.Logger, chainRegistryBaseUrl, validatorRegistryBaseUrl string) *chainRegistryClient {
 	return &chainRegistryClient{
 		// Initially empty chain name cache
 		chainNames:         []string{},

@@ -3,11 +3,11 @@ package tx
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/tessellated-io/pickaxe/cosmos/rpc"
 	"github.com/tessellated-io/pickaxe/crypto"
+	"github.com/tessellated-io/pickaxe/log"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -18,7 +18,7 @@ import (
 // Broadcaster wraps TxBroadcaster. You probably just want to use NewDefaultBroadcaster.
 
 type Broadcaster struct {
-	logger  *slog.Logger
+	logger  *log.Logger
 	wrapped TxBroadcaster
 }
 
@@ -28,7 +28,7 @@ func NewDefaultBroadcaster(
 	bech32Prefix string,
 	signer crypto.BytesSigner,
 	gasManager GasManager,
-	logger *slog.Logger,
+	logger *log.Logger,
 	rpcClient rpc.RpcClient,
 	signingMetadataProvider *SigningMetadataProvider,
 	txProvider TxProvider,
@@ -76,7 +76,9 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 
 		// Attempt to sign and broadcast
 		broadcastResult, broadcastErr := b.wrapped.signAndBroadcast(ctx, msgs)
-		b.logger.Debug().Err(broadcastErr).Str("broadcast_result", broadcastResult.String()).Msg("broadcaster::received from signAndBroadcast")
+		logger := b.logger.With("tx_hash", txHash, "error", broadcastErr.Error(), "broadcast_result", broadcastResult.String())
+
+		logger.Debug("broadcaster::received from signAndBroadcast")
 		if broadcastErr != nil {
 			return "", broadcastErr
 		}
@@ -93,14 +95,15 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 			code := broadcastResult.TxResponse.Code
 			logs := broadcastResult.TxResponse.RawLog
 			err := fmt.Errorf(logs)
+			logger := logger.With("codespace", codespace, "code", code)
 
 			if IsGasRelatedError(codespace, code) {
-				b.logger.Error().Err(err).Str("codespace", codespace).Uint32("code", code).Msg("failed to sign and broadcast due to gas, will retry")
+				logger.Error("failed to sign and broadcast due to gas, will retry", "error", err.Error())
 				continue
 			}
 
 			// otherwise, we've failed.
-			b.logger.Error().Err(err).Str("codespace", codespace).Uint32("code", code).Msg("broadcasted, but got non-success response code.")
+			logger.Error("broadcasted, but got non-success response code", "error", err.Error())
 			return "", err
 		}
 
@@ -109,7 +112,7 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 		txStatus, err := b.wrapped.checkTxStatus(ctx, txHash)
 		if err != nil {
 			// Something fundamentatlly bad happened, give up
-			b.logger.Error().Err(err).Str("tx_hash", txHash).Msg("failed to get tx status")
+			logger.Error("failed to get tx status", "error", err.Error)
 			return "", err
 		}
 
@@ -118,18 +121,19 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 			codespace := txStatus.TxResponse.Codespace
 			code := txStatus.TxResponse.Code
 			if IsGasRelatedError(codespace, code) {
-				b.logger.Error().Err(fmt.Errorf("detected gas error in broadcast. %s", txStatus.TxResponse.RawLog)).Str("codespace", codespace).Uint32("code", code).Msg("transaction landed on chain but failed due to gas, will retry")
+				logger.Error("transaction landed on chain but failed due to gas, will retry", "error", fmt.Errorf("detected gas error in broadcast: %s", txStatus.TxResponse.RawLog), txStatus.TxResponse.RawLog)
+
 				continue
 			}
 
 			// Otherwise, there is nothing we can do. Hot swap to an error though if needed.
 			isSuccess := IsSuccessTxStatus(txStatus)
 			if isSuccess {
-				b.logger.Info().Str("tx_hash", txHash).Msg("transaction sent and landed on chain, successfully.")
+				b.logger.Info("transaction sent and landed on chain, successfully.")
 				return txHash, nil
 			} else {
 				err := fmt.Errorf(txStatus.TxResponse.RawLog)
-				b.logger.Error().Err(err).Str("tx_hash", txHash).Msg("transaction sent and landed on chain but failed due to non-gas related error")
+				b.logger.Error("transaction sent and landed on chain but failed due to non-gas related error", "error", err.Error())
 				return txHash, err
 			}
 		}
@@ -138,7 +142,7 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 			// We didn't find the transaction, and we didn't get an error. Tough to say, but let's ditch since rebroadcasting could be dangerous
 			// in case a bunch of txs settle in O(hours)
 			err := fmt.Errorf("transaction status not found, consider increasing the gas fee")
-			b.logger.Error().Err(err).Str("tx_hash", txHash).Msg("failed to get tx status")
+			b.logger.Error("failed to get tx status", "error", err.Error())
 			return "", err
 		}
 
@@ -164,7 +168,7 @@ type defaultBroadcaster struct {
 
 	// Services
 	gasManager              GasManager
-	logger                  *slog.Logger
+	logger                  *log.Logger
 	rpcClient               rpc.RpcClient
 	signingMetadataProvider *SigningMetadataProvider
 	txProvider              TxProvider
@@ -177,7 +181,7 @@ func NewDefaultTxBroadcaster(
 	bech32Prefix string,
 	signer crypto.BytesSigner,
 	gasManager GasManager,
-	logger *slog.Logger,
+	logger *log.Logger,
 	rpcClient rpc.RpcClient,
 	signingMetadataProvider *SigningMetadataProvider,
 	txProvider TxProvider,
@@ -199,19 +203,21 @@ func NewDefaultTxBroadcaster(
 
 // Private helper, incorporating core functionality
 func (b *defaultBroadcaster) signAndBroadcast(ctx context.Context, msgs []sdk.Msg) (broadcastResult *txtypes.BroadcastTxResponse, err error) {
+	logger := b.logger.With("chain_name", b.chainName)
+
 	// Get the gas price, which is needed to sign the message
 	gasPrice, err := b.gasManager.GetGasPrice(b.chainName)
 	if err != nil {
 		return nil, err
 	}
-	b.logger.Debug().Msg("txbroadcaster received gas price")
+	logger.Debug("txbroadcaster received gas price")
 
 	// Get the gas factor, which is needed to simulate the message
 	gasFactor, err := b.gasManager.GetGasFactor(b.chainName)
 	if err != nil {
 		return nil, err
 	}
-	b.logger.Debug().Msg("txbroadcaster received gas factor")
+	logger.Debug("txbroadcaster received gas factor")
 
 	// Get the signer's metadata
 	senderAddress := b.signer.GetAddress(b.bech32Prefix)
@@ -219,14 +225,14 @@ func (b *defaultBroadcaster) signAndBroadcast(ctx context.Context, msgs []sdk.Ms
 	if err != nil {
 		return nil, err
 	}
-	b.logger.Debug().Msg("txbroadcaster received signer metadata")
+	logger.Debug("txbroadcaster received signer metadata")
 
 	// Formulate and sign the message
 	signedMessage, gasWanted, err := b.txProvider.ProvideTx(ctx, gasPrice, gasFactor, msgs, signingMetadata)
 	if err != nil {
 		return nil, err
 	}
-	b.logger.Debug().Str("chain_name", b.chainName).Msg("tx broadcaster signed transaction")
+	logger.Debug("tx broadcaster signed transaction")
 
 	// Attempt to broadcast
 	result, broadcastErr := b.rpcClient.Broadcast(ctx, signedMessage)
@@ -237,7 +243,7 @@ func (b *defaultBroadcaster) signAndBroadcast(ctx context.Context, msgs []sdk.Ms
 		codespace := result.TxResponse.Codespace
 		broadcastResponseCode := result.TxResponse.Code
 		logs := result.TxResponse.RawLog
-		b.logger.Info().Float64("gas_price", gasPrice).Float64("gas_factor", gasFactor).Str("chain_name", b.chainName).Str("tx_hash", txHash).Uint32("code", broadcastResponseCode).Str("codespace", codespace).Str("logs", logs).Msg("📣 attempted to broadcast transaction")
+		b.logger.Info("📣 attempted to broadcast transaction", "logs", logs, "gas_price", gasPrice, "gas_factor", gasFactor, "tx_hash", txHash, "codespace", codespace, "code", broadcastResponseCode)
 	}
 
 	// Broadcast response helpfully sets `gasWanted` to zero if the transaction failed, which is a bit of a pain, especially if we want to get
@@ -258,13 +264,13 @@ func (b *defaultBroadcaster) signAndBroadcast(ctx context.Context, msgs []sdk.Ms
 
 func (b *defaultBroadcaster) checkTxStatus(ctx context.Context, txHash string) (*txtypes.GetTxResponse, error) {
 	txStatus, err := b.rpcClient.GetTxStatus(ctx, txHash)
+	codespace := txStatus.TxResponse.Codespace
+	broadcastResponseCode := txStatus.TxResponse.Code
+	logger := b.logger.With("chain_name", b.chainName, "tx_hash", txHash, "code", broadcastResponseCode, "codespace", codespace)
 	if err == nil {
-		txHash := txStatus.TxResponse.TxHash
-		codespace := txStatus.TxResponse.Codespace
-		broadcastResponseCode := txStatus.TxResponse.Code
 		logs := txStatus.TxResponse.RawLog
-		b.logger.Info().Str("chain_name", b.chainName).Str("tx_hash", txHash).Uint32("code", broadcastResponseCode).Str("codespace", codespace).Msg("got a settled tx status")
-		b.logger.Debug().Str("chain_name", b.chainName).Str("tx_hash", txHash).Uint32("code", broadcastResponseCode).Str("codespace", codespace).Str("logs", logs).Msg("logging full tx logs")
+		logger.Info("got a settled tx status")
+		logger.Debug("full tx logs", "logs", logs)
 
 		return txStatus, nil
 	}
@@ -273,11 +279,11 @@ func (b *defaultBroadcaster) checkTxStatus(ctx context.Context, txHash string) (
 	if ok && grpcErr.Code() == codes.NotFound {
 
 		// No error, but nothing was found
-		b.logger.Debug().Str("chain_name", b.chainName).Str("tx_hash", txHash).Msg("tx not included in chain")
+		logger.Debug("tx not included in chain")
 		return nil, nil
 	}
 
-	b.logger.Debug().Err(err).Str("chain_name", b.chainName).Str("tx_hash", txHash).Msg("error querying tx status")
+	logger.Debug("error querying tx status", "error", err.Error())
 	return nil, err
 }
 
@@ -288,7 +294,7 @@ type pollingTxBroadcaster struct {
 	delay    time.Duration
 
 	// Services
-	logger             *slog.Logger
+	logger             *log.Logger
 	wrappedBroadcaster TxBroadcaster
 }
 
@@ -297,7 +303,7 @@ var _ TxBroadcaster = (*pollingTxBroadcaster)(nil)
 func NewPollingTxBroadcaster(
 	attempts uint,
 	delay time.Duration,
-	logger *slog.Logger,
+	logger *log.Logger,
 	wrappedBroadcaster TxBroadcaster,
 ) (TxBroadcaster, error) {
 	broadcaster := &pollingTxBroadcaster{
@@ -317,7 +323,9 @@ func (b *pollingTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []sdk.
 }
 
 func (b *pollingTxBroadcaster) checkTxStatus(ctx context.Context, txHash string) (*txtypes.GetTxResponse, error) {
-	b.logger.Info().Str("tx_hash", txHash).Msg("polling for inclusion")
+	logger := b.logger.With("tx_hash", txHash)
+	logger.Info("polling for inclusion")
+
 	var i uint
 	for i = 0; i < b.attempts; i++ {
 		// Ditch if context has timed out
@@ -342,7 +350,7 @@ func (b *pollingTxBroadcaster) checkTxStatus(ctx context.Context, txHash string)
 		} else {
 			// precondition: txStatus is nil
 			if err == nil {
-				b.logger.Info().Str("tx_hash", txHash).Uint("attempt", i+1).Uint("max_attempts", b.attempts).Msg("transaction still not included")
+				b.logger.Info("transaction still not included", "attempt", i+1, "max_attempts", b.attempts)
 			} else {
 				// something more fundamental has gone wrong.
 				return nil, err
@@ -351,7 +359,7 @@ func (b *pollingTxBroadcaster) checkTxStatus(ctx context.Context, txHash string)
 	}
 
 	err := fmt.Errorf("transaction not included after exhausting all polling attempts: %s", txHash)
-	b.logger.Error().Err(err).Str("tx_hash", txHash).Msg("polling finished")
+	logger.Error("polling finished", "error", err.Error())
 
 	// Return nil here, since a not found error isn't really a nil error, and we may want to do things like track gas.
 	return nil, nil
@@ -363,7 +371,7 @@ type gasTrackingTxBroadcaster struct {
 
 	// Services
 	gasManager         GasManager
-	logger             *slog.Logger
+	logger             *log.Logger
 	wrappedBroadcaster TxBroadcaster
 }
 
@@ -372,7 +380,7 @@ var _ TxBroadcaster = (*gasTrackingTxBroadcaster)(nil)
 func NewGasTrackingTxBroadcaster(
 	chainName string,
 	gasManager GasManager,
-	logger *slog.Logger,
+	logger *log.Logger,
 	wrappedBroadcaster TxBroadcaster,
 ) (TxBroadcaster, error) {
 	broadcaster := &gasTrackingTxBroadcaster{
@@ -407,7 +415,7 @@ func (b *gasTrackingTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []
 	// Otherwise, try to handle the result for gas adjustment
 	gasManagementErr := b.gasManager.ManageFailingBroadcastResult(b.chainName, result)
 	if gasManagementErr != nil {
-		b.logger.Warn().Err(gasManagementErr).Msg("failed to adjust gas due to broadcast result.")
+		b.logger.Warn("failed to adjust gas due to broadcast result", "error", gasManagementErr)
 	}
 
 	return result, err
@@ -415,34 +423,34 @@ func (b *gasTrackingTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []
 
 func (b *gasTrackingTxBroadcaster) checkTxStatus(ctx context.Context, txHash string) (*txtypes.GetTxResponse, error) {
 	txStatus, err := b.wrappedBroadcaster.checkTxStatus(ctx, txHash)
-	b.logger.Debug().Err(err).Str("tx_status", txStatus.String()).Msg("gas_tracking_tx_broadcaster::got checktx result")
+	b.logger.Debug("gas_tracking_tx_broadcaster::got checktx result", "error", err, "tx_status", txStatus.String())
 
 	// Errors indicate a fundamental problem, like network connectivity
 	if err != nil {
-		b.logger.Debug().Msg("gas_tracking_tx_broadcaster::receiveds error from wrapped broadcaster, will not adjust gas")
+		b.logger.Debug("gas_tracking_tx_broadcaster::received error from wrapped broadcaster, will not adjust gas")
 		return txStatus, err
 	}
 
 	// If there's no error, but no txstatus reported, then the transaction is probably under-fee'd and we should report failure
 	if err == nil && txStatus == nil {
-		b.logger.Debug().Msg("gas_tracking_tx_broadcaster::did not find transaction, but did not get an error, adjusting gas")
+		b.logger.Debug("gas_tracking_tx_broadcaster::did not find transaction, but did not get an error, adjusting gas")
 
 		gasManagementErr := b.gasManager.ManageInclusionFailure(b.chainName)
 		if gasManagementErr != nil {
-			b.logger.Warn().Err(gasManagementErr).Msg("failed to adjust gas due to missing tx inclusion.")
+			b.logger.Warn("failed to adjust gas due to missing tx inclusion", "error", gasManagementErr)
 		}
 
-		b.logger.Debug().Msg("gas_tracking_tx_broadcaster::adjusted gas")
+		b.logger.Debug("gas_tracking_tx_broadcaster::adjusted gas")
 		return txStatus, err
 	}
 
 	// If there is a tx status, try to manage it.
-	b.logger.Debug().Msg("gas_tracking_tx_broadcaster::got a check tx result")
+	b.logger.Debug("gas_tracking_tx_broadcaster::got a check tx result")
 	gasManagementErr := b.gasManager.ManageIncludedTransactionStatus(b.chainName, txStatus)
 	if gasManagementErr != nil {
-		b.logger.Warn().Err(gasManagementErr).Msg("failed to adjust gas due to tx status")
+		b.logger.Warn("failed to adjust gas due to tx status")
 	}
-	b.logger.Debug().Msg("gas_tracking_tx_broadcaster::adjusted gas due to check tx result")
+	b.logger.Debug("gas_tracking_tx_broadcaster::adjusted gas due to check tx result")
 	return txStatus, err
 }
 
@@ -453,7 +461,7 @@ type retryableTxBroadcaster struct {
 	delay    time.Duration
 
 	// Services
-	logger             *slog.Logger
+	logger             *log.Logger
 	wrappedBroadcaster TxBroadcaster
 }
 
@@ -462,7 +470,7 @@ var _ TxBroadcaster = (*retryableTxBroadcaster)(nil)
 func NewRetryableBroadcaster(
 	attempts uint,
 	delay time.Duration,
-	logger *slog.Logger,
+	logger *log.Logger,
 	wrappedBroadcaster TxBroadcaster,
 ) (TxBroadcaster, error) {
 	broadcaster := &retryableTxBroadcaster{
@@ -477,6 +485,8 @@ func NewRetryableBroadcaster(
 }
 
 func (b *retryableTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []sdk.Msg) (broadcastResult *txtypes.BroadcastTxResponse, err error) {
+	logger := b.logger.With("max_attempts", b.attempts)
+
 	var i uint
 	for i = 0; i < b.attempts; i++ {
 		// Ditch if context has timed out
@@ -489,21 +499,24 @@ func (b *retryableTxBroadcaster) signAndBroadcast(ctx context.Context, msgs []sd
 		if err == nil {
 			return result, err
 		}
+		logger := logger.With("attempt", i+1, "error", err.Error())
 
 		// Give up if all attempts are exhausted.
 		if i+1 == b.attempts {
-			b.logger.Error().Err(err).Uint("attempt", i+1).Uint("max_attempts", b.attempts).Msg("failed in all attempts to sign and broadcast")
+			logger.Error("failed in all attempts to sign and broadcast")
 			return result, err
 		}
 
 		// Otherwise, poll and wait.
-		b.logger.Error().Err(err).Uint("attempt", i+1).Uint("max_attempts", b.attempts).Msg("failed to sign and broadcast, will retry.")
+		logger.Error("failed to sign and broadcast, will retry")
 		time.Sleep(b.delay)
 	}
 	panic("retryable_tx_broadcaster::sign_and_broadcast::should never happen")
 }
 
 func (b *retryableTxBroadcaster) checkTxStatus(ctx context.Context, txHash string) (*txtypes.GetTxResponse, error) {
+	logger := b.logger.With("max_attempts", b.attempts)
+
 	var i uint
 	for i = 0; i < b.attempts; i++ {
 		// Ditch if context has timed out
@@ -516,15 +529,16 @@ func (b *retryableTxBroadcaster) checkTxStatus(ctx context.Context, txHash strin
 		if err == nil {
 			return result, err
 		}
+		logger := logger.With("attempt", i+1, "error", err.Error())
 
 		// Give up if all attempts are exhausted.
 		if i+1 == b.attempts {
-			b.logger.Error().Err(err).Uint("attempt", i+1).Uint("max_attempts", b.attempts).Msg("failed in all attempts to check tx status")
+			logger.Error("failed in all attempts to check tx status")
 			return result, err
 		}
 
 		// Otherwise, poll and wait.
-		b.logger.Error().Err(err).Uint("attempt", i+1).Uint("max_attempts", b.attempts).Msg("failed to check tx status, will retry.")
+		logger.Error("failed to check tx status, will retry")
 		time.Sleep(b.delay)
 	}
 	panic("retryable_tx_broadcaster::check_tx_status::should never happen")

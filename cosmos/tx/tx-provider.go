@@ -2,9 +2,9 @@ package tx
 
 import (
 	"context"
-	"log/slog"
 
 	"github.com/tessellated-io/pickaxe/crypto"
+	"github.com/tessellated-io/pickaxe/log"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	cosmostx "github.com/cosmos/cosmos-sdk/client/tx"
@@ -23,7 +23,7 @@ type txProvider struct {
 	feeDenom    string
 	memo        string
 
-	logger            *slog.Logger
+	logger            *log.Logger
 	simulationManager SimulationManager
 
 	txConfig  client.TxConfig
@@ -33,7 +33,7 @@ type txProvider struct {
 // Assert type conformance
 var _ TxProvider = (*txProvider)(nil)
 
-func NewTxProvider(bytesSigner crypto.BytesSigner, chainID, feeDenom, memo string, logger *slog.Logger, simulationManager SimulationManager, txConfig client.TxConfig) (TxProvider, error) {
+func NewTxProvider(bytesSigner crypto.BytesSigner, chainID, feeDenom, memo string, logger *log.Logger, simulationManager SimulationManager, txConfig client.TxConfig) (TxProvider, error) {
 	txFactory := cosmostx.Factory{}.WithChainID(chainID).WithTxConfig(txConfig)
 
 	return &txProvider{
@@ -54,7 +54,8 @@ func NewTxProvider(bytesSigner crypto.BytesSigner, chainID, feeDenom, memo strin
 // Sign returns the set of messages, encoded with metadata, and includes a valid signature.
 // It also includes the gas that was desired. This API is kinda nuts, but I can't find a sane way around it.
 func (txp *txProvider) ProvideTx(ctx context.Context, gasPrice, gasFactor float64, messages []sdk.Msg, metadata *SigningMetadata) ([]byte, int64, error) {
-	txp.logger.Debug().Str("chain_id", metadata.chainID).Str("account", metadata.address).Uint64("sequence", metadata.sequence).Uint64("account_number", metadata.accountNumber).Msg("preparing to sign transaction")
+	logger := txp.logger.With("chain_id", metadata.chainID, "account", metadata.address, "sequence", metadata.sequence, "account_number", metadata.accountNumber)
+	logger.Debug("preparing to sign transaction")
 
 	// Build a transaction
 	txb, err := txp.txFactory.BuildUnsignedTx(messages...)
@@ -81,7 +82,7 @@ func (txp *txProvider) ProvideTx(ctx context.Context, gasPrice, gasFactor float6
 	if err != nil {
 		return nil, 0, err
 	}
-	txp.logger.Debug().Int64("gas_units", simulationResult.GasRecommendation).Msg("simulated gas")
+	txp.logger.Debug("simulated gas", "gas_units", simulationResult.GasRecommendation)
 	txb.SetGasLimit(uint64(simulationResult.GasRecommendation))
 
 	fee := []sdk.Coin{

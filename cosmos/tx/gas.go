@@ -3,11 +3,12 @@ package tx
 import (
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"os"
 	"regexp"
 	"strconv"
 	"sync"
+
+	"github.com/tessellated-io/pickaxe/log"
 
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 )
@@ -181,7 +182,7 @@ func extractMinGlobalFee(errMsg string) (float64, error) {
 type FileGasPriceProvider struct {
 	wrapped GasPriceProvider
 
-	logger      *slog.Logger
+	logger      *log.Logger
 	gasDataFile string
 
 	lock *sync.Mutex
@@ -200,7 +201,7 @@ type GasData struct {
 }
 
 // Create a new FileGasProvider which will wrap an in-memory gas price provider
-func NewFileGasPriceProvider(logger *slog.Logger, dataDirectory string) (GasPriceProvider, error) {
+func NewFileGasPriceProvider(logger *log.Logger, dataDirectory string) (GasPriceProvider, error) {
 	// Wrap an in memory provider, so that the logic is reused
 	// TODO: InMemoryGasPriceProvider should probably be renamed to BaseGasPriceProvider
 	wrapped, err := NewInMemoryGasPriceProvider()

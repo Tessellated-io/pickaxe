@@ -3,10 +3,10 @@ package registry
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"time"
 
 	retry "github.com/avast/retry-go/v4"
+	"github.com/tessellated-io/pickaxe/log"
 )
 
 // Implements a retryable and returns the last error
@@ -16,14 +16,14 @@ type retryableChainRegistryClient struct {
 	attempts retry.Option
 	delay    retry.Option
 
-	logger *slog.Logger
+	logger *log.Logger
 }
 
 // Ensure that retryableChainRegistryClient implements ChainRegistryClient
 var _ ChainRegistryClient = (*retryableChainRegistryClient)(nil)
 
 // NewRetryableChainRegistryClient returns a new retryableChainRegistryClient
-func NewRetryableChainRegistryClient(attempts uint, delay time.Duration, chainRegistryClient ChainRegistryClient, logger *slog.Logger) (ChainRegistryClient, error) {
+func NewRetryableChainRegistryClient(attempts uint, delay time.Duration, chainRegistryClient ChainRegistryClient, logger *log.Logger) (ChainRegistryClient, error) {
 	return &retryableChainRegistryClient{
 		wrappedClient: chainRegistryClient,
 

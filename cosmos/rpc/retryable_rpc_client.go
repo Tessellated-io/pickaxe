@@ -3,10 +3,10 @@ package rpc
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"time"
 
 	retry "github.com/avast/retry-go/v4"
+	"github.com/tessellated-io/pickaxe/log"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
@@ -22,14 +22,14 @@ type retryableRpcClient struct {
 	attempts retry.Option
 	delay    retry.Option
 
-	logger *slog.Logger
+	logger *log.Logger
 }
 
 // Ensure that retryableRpcClient implements RpcClient
 var _ RpcClient = (*retryableRpcClient)(nil)
 
 // NewRetryableRPCClient returns a new retryableRpcClient
-func NewRetryableRpcClient(attempts uint, delay time.Duration, rpcClient RpcClient, logger *slog.Logger) (RpcClient, error) {
+func NewRetryableRpcClient(attempts uint, delay time.Duration, rpcClient RpcClient, logger *log.Logger) (RpcClient, error) {
 	return &retryableRpcClient{
 		wrappedClient: rpcClient,
 

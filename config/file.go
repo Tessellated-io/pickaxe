@@ -2,12 +2,12 @@ package config
 
 import (
 	"fmt"
-	"log/slog"
 	os2 "os"
 	"os/user"
 	"strings"
 
 	"github.com/cometbft/cometbft/libs/os"
+	"github.com/tessellated-io/pickaxe/log"
 )
 
 // normalizeConfigFile loads a config file from a short path (ex. ~/.restake/config.yml => /home/tessellated/.restake/config.yml)
@@ -20,7 +20,7 @@ func ReadFile(configFile string) (string, error) {
 	return expandedConfigFile, nil
 }
 
-func CreateDirectoryIfNeeded(configurationDirectory string, logger *slog.Logger) error {
+func CreateDirectoryIfNeeded(configurationDirectory string, logger *log.Logger) error {
 	expanded := ExpandHomeDir(configurationDirectory)
 	logger = logger.With("dir", expanded)
 
@@ -43,7 +43,7 @@ func CreateDirectoryIfNeeded(configurationDirectory string, logger *slog.Logger)
 	return nil
 }
 
-func SafeWrite(file string, contents []byte, logger *slog.Logger) error {
+func SafeWrite(file string, contents []byte, logger *log.Logger) error {
 	expanded := ExpandHomeDir(file)
 	logger = logger.With("file", expanded)
 

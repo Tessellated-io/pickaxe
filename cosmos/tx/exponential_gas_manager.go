@@ -2,9 +2,10 @@ package tx
 
 import (
 	"fmt"
-	"log/slog"
 	"math"
 	"sync"
+
+	"github.com/tessellated-io/pickaxe/log"
 
 	txtypes "github.com/cosmos/cosmos-sdk/types/tx"
 )
@@ -38,7 +39,7 @@ type geometricGasManager struct {
 
 	// Core Services
 	gasPriceProvider GasPriceProvider
-	logger           *slog.Logger
+	logger           *log.Logger
 }
 
 var _ GasManager = (*geometricGasManager)(nil)
@@ -48,7 +49,7 @@ func NewGeometricGasManager(
 	maxStepSize float64,
 	scaleFactor float64,
 	gasPriceProvider GasPriceProvider,
-	logger *slog.Logger,
+	logger *log.Logger,
 ) (GasManager, error) {
 	if scaleFactor < 0 || scaleFactor >= 1 {
 		return nil, fmt.Errorf("invalid scale factor: %f. Must conform to: 0 < scale_factor < 1", scaleFactor)

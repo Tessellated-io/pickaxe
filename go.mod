@@ -1,12 +1,15 @@
 module github.com/tessellated-io/pickaxe
 
-go 1.20
+go 1.21.0
+
+toolchain go1.22.6
 
 require (
 	github.com/avast/retry-go/v4 v4.5.0
 	github.com/btcsuite/btcd/btcec/v2 v2.3.2
 	github.com/cometbft/cometbft v0.37.2
 	github.com/cosmos/cosmos-sdk v0.47.4
+	github.com/dpotapov/slogpfx v0.0.0-20230917063348-41a73c95c536
 	github.com/evmos/evmos/v14 v14.0.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/crypto v0.11.0
