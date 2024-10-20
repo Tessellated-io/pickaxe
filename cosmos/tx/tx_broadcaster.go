@@ -2,6 +2,7 @@ package tx
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -94,7 +95,7 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 			codespace := broadcastResult.TxResponse.Codespace
 			code := broadcastResult.TxResponse.Code
 			logs := broadcastResult.TxResponse.RawLog
-			err := fmt.Errorf(logs)
+			err := errors.New(logs)
 			logger := logger.With("codespace", codespace, "code", code)
 
 			if IsGasRelatedError(codespace, code) {
@@ -132,7 +133,7 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 				b.logger.Info("transaction sent and landed on chain, successfully.")
 				return txHash, nil
 			} else {
-				err := fmt.Errorf(txStatus.TxResponse.RawLog)
+				err := errors.New(txStatus.TxResponse.RawLog)
 				b.logger.Error("transaction sent and landed on chain but failed due to non-gas related error", "error", err.Error())
 				return txHash, err
 			}

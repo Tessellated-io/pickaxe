@@ -54,7 +54,6 @@ func (r *retryableRpcClient) Broadcast(ctx context.Context, txBytes []byte) (*tx
 
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
@@ -80,7 +79,6 @@ func (r *retryableRpcClient) GetTxStatus(ctx context.Context, txHash string) (*t
 
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
@@ -105,7 +103,6 @@ func (r *retryableRpcClient) Simulate(ctx context.Context, txBytes []byte) (*txt
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
@@ -125,13 +122,11 @@ func (r *retryableRpcClient) Account(ctx context.Context, address string) (autht
 
 	err = retry.Do(func() error {
 		result, err = r.wrappedClient.Account(ctx, address)
-
 		if err != nil {
 			r.logger.Error("failed call in rpc client, will retry", "error", err.Error(), "method", "account")
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
@@ -156,7 +151,6 @@ func (r *retryableRpcClient) GetBalance(ctx context.Context, address, denom stri
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
@@ -181,7 +175,6 @@ func (r *retryableRpcClient) GetDenomMetadata(ctx context.Context, denom string)
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
@@ -206,7 +199,6 @@ func (r *retryableRpcClient) GetDelegators(ctx context.Context, validatorAddress
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
@@ -231,7 +223,6 @@ func (r *retryableRpcClient) GetGrants(ctx context.Context, address string) ([]*
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
@@ -256,7 +247,6 @@ func (r *retryableRpcClient) GetPendingRewards(ctx context.Context, delegator, v
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)

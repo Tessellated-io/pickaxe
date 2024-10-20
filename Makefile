@@ -54,7 +54,7 @@ go.sum: go.mod
 ###                                Linting                                  ###
 ###############################################################################
 
-golangci_version=v1.53.3
+golangci_version=v1.61.0
 
 lint-install:
 	@echo "--> Installing golangci-lint $(golangci_version)"
