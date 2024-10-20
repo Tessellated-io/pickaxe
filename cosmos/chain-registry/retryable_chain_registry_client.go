@@ -71,7 +71,6 @@ func (r *retryableChainRegistryClient) ChainNameForChainID(ctx context.Context, 
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
@@ -96,7 +95,6 @@ func (r *retryableChainRegistryClient) ChainInfo(ctx context.Context, chainName 
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
@@ -121,7 +119,6 @@ func (r *retryableChainRegistryClient) AssetList(ctx context.Context, chainName 
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
@@ -146,7 +143,6 @@ func (r *retryableChainRegistryClient) Validator(ctx context.Context, targetVali
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)

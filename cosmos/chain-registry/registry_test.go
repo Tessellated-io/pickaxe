@@ -2,7 +2,6 @@ package registry_test
 
 import (
 	"context"
-	"log/slog"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,8 +9,8 @@ import (
 	"github.com/tessellated-io/pickaxe/log"
 )
 
-const chainsBaseUrl = "https://planetarium.tessellated.io/v1/chains"
-const validatorsBaseUrl = "https://planetarium.tessellated.io/v1/validators"
+const chainsBaseUrl = "https://planetarium.services.tessellated.io/v1/chains"
+const validatorsBaseUrl = "https://planetarium.services.tessellated.io/v1/validators"
 
 func TestCanRetrieveChain(t *testing.T) {
 	client := registry.NewChainRegistryClient(log.Default(), chainsBaseUrl, validatorsBaseUrl)

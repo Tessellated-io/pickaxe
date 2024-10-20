@@ -1,6 +1,9 @@
 package util
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 func InterfaceToError(errorInterface interface{}) error {
 	// Attempt to coerce into error
@@ -12,7 +15,7 @@ func InterfaceToError(errorInterface interface{}) error {
 	// Otherwise attempt to coerce into string
 	stringifiedErr, ok := errorInterface.(string)
 	if ok {
-		return fmt.Errorf(stringifiedErr)
+		return errors.New(stringifiedErr)
 	}
 
 	// Otherwise, just ditch with a generic error.

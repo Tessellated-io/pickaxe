@@ -2,9 +2,8 @@ package log
 
 import (
 	"fmt"
-	"strings"
-
 	"log/slog"
+	"strings"
 )
 
 func ParseLogLevel(input string) slog.Level {

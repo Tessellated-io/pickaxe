@@ -2,6 +2,7 @@ package tx
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -94,7 +95,7 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 			codespace := broadcastResult.TxResponse.Codespace
 			code := broadcastResult.TxResponse.Code
 			logs := broadcastResult.TxResponse.RawLog
-			err := fmt.Errorf(logs)
+			err := errors.New(logs)
 			logger := logger.With("codespace", codespace, "code", code)
 
 			if IsGasRelatedError(codespace, code) {
@@ -121,7 +122,7 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 			codespace := txStatus.TxResponse.Codespace
 			code := txStatus.TxResponse.Code
 			if IsGasRelatedError(codespace, code) {
-				logger.Error("transaction landed on chain but failed due to gas, will retry", "error", fmt.Errorf("detected gas error in broadcast: %s", txStatus.TxResponse.RawLog), txStatus.TxResponse.RawLog)
+				logger.Error("transaction landed on chain but failed due to gas, will retry", "error", fmt.Errorf("detected gas error in broadcast: %s", txStatus.TxResponse.RawLog))
 
 				continue
 			}
@@ -132,7 +133,7 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 				b.logger.Info("transaction sent and landed on chain, successfully.")
 				return txHash, nil
 			} else {
-				err := fmt.Errorf(txStatus.TxResponse.RawLog)
+				err := errors.New(txStatus.TxResponse.RawLog)
 				b.logger.Error("transaction sent and landed on chain but failed due to non-gas related error", "error", err.Error())
 				return txHash, err
 			}

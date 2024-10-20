@@ -1,10 +1,9 @@
 package log
 
 import (
+	"log/slog"
 	"os"
 	"strings"
-
-	"log/slog"
 
 	"github.com/dpotapov/slogpfx"
 )
