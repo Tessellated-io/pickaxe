@@ -51,7 +51,7 @@ var _ RpcClient = (*grpcClient)(nil)
 func NewGrpcClient(nodeGrpcUri string, cdc *codec.ProtoCodec, log *log.Logger) (RpcClient, error) {
 	conn, err := grpc.GetGrpcConnection(nodeGrpcUri)
 	if err != nil {
-		log.Error().Str("grpc url", nodeGrpcUri).Err(err).Msg("Unable to connect to gRPC")
+		log.Error("Unable to connect to gRPC", "grpc_url", nodeGrpcUri)
 		return nil, err
 	}
 
@@ -103,7 +103,7 @@ func (r *grpcClient) GetBalance(ctx context.Context, address, denom string) (*sd
 	if err != nil {
 		return nil, err
 	}
-	r.log.Debug().Int("num_balances", len(balances)).Str("address", address).Str("denom", denom).Msg("Retrieved balances")
+	r.log.Debug("retrieved balances", "num_balances", len(balances), "address", address, "denom", denom)
 
 	return util.ExtractCoin(denom, balances)
 }
@@ -128,7 +128,7 @@ func (r *grpcClient) GetPendingRewards(ctx context.Context, delegator, validator
 		}
 	}
 
-	r.log.Debug().Str("delegator", delegator).Str("validator", validator).Msg("unable to find any rewards attributable to validator")
+	r.log.Debug("unable to find any rewards attributable to validator", "delegator", delegator, "validator", validator)
 	return sdk.NewDec(0), nil
 }
 
@@ -229,7 +229,7 @@ func (r *grpcClient) GetGrants(ctx context.Context, botAddress string) ([]*authz
 	if err != nil {
 		return nil, err
 	}
-	r.log.Debug().Int("num grants", len(grants)).Str("bot address", botAddress).Msg("Retrieved grants")
+	r.log.Debug("retrieved grants", "num grants", len(grants), "bot address", botAddress)
 
 	return grants, nil
 }
@@ -263,7 +263,7 @@ func (r *grpcClient) GetDelegators(ctx context.Context, validatorAddress string)
 	if err != nil {
 		return nil, err
 	}
-	r.log.Debug().Str("validator address", validatorAddress).Int("num delegators", len(delegators)).Msg("Retrieved delegations")
+	r.log.Debug("retrieved delegations", "validator address", validatorAddress, "num delegators", len(delegators))
 
 	return delegators, nil
 }
@@ -293,7 +293,7 @@ func retrievePaginatedData[DataType any](
 
 		// Append the data
 		data = append(data, rpcResponse.data...)
-		r.log.Debug().Int("num in page", len(rpcResponse.data)).Int("total fetched", len(data)).Msg(fmt.Sprintf("Fetched page of %s", noun))
+		r.log.Debug(fmt.Sprintf("fetched page of %s", noun), "num in page", len(rpcResponse.data), "total fetched", len(data))
 
 		// Update next key or break out of loop if we have finished
 		if len(rpcResponse.nextKey) == 0 {

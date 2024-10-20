@@ -4,17 +4,16 @@ import (
 	"context"
 	"testing"
 
-	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	registry "github.com/tessellated-io/pickaxe/cosmos/chain-registry"
 	"github.com/tessellated-io/pickaxe/log"
 )
 
-const chainsBaseUrl = "https://planetarium.tessellated.io/v1/chains"
-const validatorsBaseUrl = "https://planetarium.tessellated.io/v1/validators"
+const chainsBaseUrl = "https://planetarium.services.tessellated.io/v1/chains"
+const validatorsBaseUrl = "https://planetarium.services.tessellated.io/v1/validators"
 
 func TestCanRetrieveChain(t *testing.T) {
-	client := registry.NewChainRegistryClient(log.NewLogger(zerolog.FatalLevel), chainsBaseUrl, validatorsBaseUrl)
+	client := registry.NewChainRegistryClient(log.Default(), chainsBaseUrl, validatorsBaseUrl)
 
 	hubInfo, err := client.ChainInfo(context.Background(), "cosmoshub")
 	assert.Nil(t, err, "error should be nil")
@@ -23,21 +22,21 @@ func TestCanRetrieveChain(t *testing.T) {
 }
 
 func TestCanRetrieveAssets(t *testing.T) {
-	client := registry.NewChainRegistryClient(log.NewLogger(zerolog.FatalLevel), chainsBaseUrl, validatorsBaseUrl)
+	client := registry.NewChainRegistryClient(log.Default(), chainsBaseUrl, validatorsBaseUrl)
 
 	_, err := client.AssetList(context.Background(), "cosmoshub")
 	assert.Nil(t, err, "error should be nil")
 }
 
 func TestCanRetrieveAllChains(t *testing.T) {
-	client := registry.NewChainRegistryClient(log.NewLogger(zerolog.FatalLevel), chainsBaseUrl, validatorsBaseUrl)
+	client := registry.NewChainRegistryClient(log.Default(), chainsBaseUrl, validatorsBaseUrl)
 
 	_, err := client.AllChainNames(context.Background())
 	assert.Nil(t, err, "error should be nil")
 }
 
 func TestCanRetrieveValidator(t *testing.T) {
-	client := registry.NewChainRegistryClient(log.NewLogger(zerolog.FatalLevel), chainsBaseUrl, validatorsBaseUrl)
+	client := registry.NewChainRegistryClient(log.Default(), chainsBaseUrl, validatorsBaseUrl)
 
 	_, err := client.Validator(context.Background(), "tessellated")
 	assert.Nil(t, err, "error should be nil")

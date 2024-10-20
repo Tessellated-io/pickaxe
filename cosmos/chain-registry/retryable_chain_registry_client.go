@@ -43,7 +43,7 @@ func (r *retryableChainRegistryClient) AllChainNames(ctx context.Context) ([]str
 	err = retry.Do(func() error {
 		result, err = r.wrappedClient.AllChainNames(ctx)
 		if err != nil {
-			r.logger.Error().Err(err).Str("method", "all_chain_names").Msg("failed call in registry client, will retry")
+			r.logger.Error("failed call in registry client, will retry", "error", err.Error(), "method", "all_chain_names")
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
@@ -67,11 +67,10 @@ func (r *retryableChainRegistryClient) ChainNameForChainID(ctx context.Context, 
 	err = retry.Do(func() error {
 		result, err = r.wrappedClient.ChainNameForChainID(ctx, targetChainID, refreshCache)
 		if err != nil {
-			r.logger.Error().Err(err).Str("method", "chain_name_for_id").Msg("failed call in rpc client, will retry")
+			r.logger.Error("failed call in registry client, will retry", "error", err.Error(), "method", "chain_name_for_id")
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
@@ -92,11 +91,10 @@ func (r *retryableChainRegistryClient) ChainInfo(ctx context.Context, chainName 
 	err = retry.Do(func() error {
 		result, err = r.wrappedClient.ChainInfo(ctx, chainName)
 		if err != nil {
-			r.logger.Error().Err(err).Str("method", "chain_info").Msg("failed call in rpc client, will retry")
+			r.logger.Error("failed call in registry client, will retry", "error", err.Error(), "method", "chain_info")
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
@@ -117,11 +115,10 @@ func (r *retryableChainRegistryClient) AssetList(ctx context.Context, chainName 
 	err = retry.Do(func() error {
 		result, err = r.wrappedClient.AssetList(ctx, chainName)
 		if err != nil {
-			r.logger.Error().Err(err).Str("method", "asset_list").Msg("failed call in rpc client, will retry")
+			r.logger.Error("failed call in registry client, will retry", "error", err.Error(), "method", "asset_list")
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)
@@ -142,11 +139,10 @@ func (r *retryableChainRegistryClient) Validator(ctx context.Context, targetVali
 	err = retry.Do(func() error {
 		result, err = r.wrappedClient.Validator(ctx, targetValidator)
 		if err != nil {
-			r.logger.Error().Err(err).Str("method", "validator").Msg("failed call in rpc client, will retry")
+			r.logger.Error("failed call in registry client, will retry", "error", err.Error(), "method", "validator")
 		}
 		return err
 	}, r.delay, r.attempts, retry.Context(ctx))
-
 	if err != nil {
 		// If err is an error from a context, unwrapping will write out nil
 		unwrappedErr := errors.Unwrap(err)

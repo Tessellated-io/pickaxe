@@ -2,29 +2,24 @@ package log
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
-
-	"github.com/rs/zerolog"
 )
 
-func ParseLogLevel(input string) zerolog.Level {
+func ParseLogLevel(input string) slog.Level {
 	sanitized := strings.ToLower(strings.TrimSpace(input))
 
 	switch sanitized {
 	case "debug":
-		return zerolog.DebugLevel
+		return slog.LevelDebug
 	case "info":
-		return zerolog.InfoLevel
+		return slog.LevelInfo
 	case "warn":
-		return zerolog.WarnLevel
+		return slog.LevelWarn
 	case "error":
-		return zerolog.ErrorLevel
-	case "fatal":
-		return zerolog.FatalLevel
-	case "panic":
-		return zerolog.PanicLevel
+		return slog.LevelError
 	default:
 		fmt.Printf("😬 Unable to parse a log level from input: \"%s\". Defaulting to log at INFO level.\n", input)
-		return zerolog.InfoLevel
+		return slog.LevelInfo
 	}
 }
