@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/tessellated-io/pickaxe/log"
 )
-
 func TestLogging_NoPrefix(t *testing.T) {
 	logger := log.NewLogger("info")
 

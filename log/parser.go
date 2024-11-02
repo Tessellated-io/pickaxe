@@ -18,6 +18,8 @@ func ParseLogLevel(input string) slog.Level {
 		return slog.LevelWarn
 	case "error":
 		return slog.LevelError
+	case "silent":
+		return slog.LevelError + 1
 	default:
 		fmt.Printf("😬 Unable to parse a log level from input: \"%s\". Defaulting to log at INFO level.\n", input)
 		return slog.LevelInfo
