@@ -77,7 +77,7 @@ func (b *Broadcaster) SignAndBroadcast(ctx context.Context, msgs []sdk.Msg) (txH
 
 		// Attempt to sign and broadcast
 		broadcastResult, broadcastErr := b.wrapped.signAndBroadcast(ctx, msgs)
-		logger := b.logger.With("tx_hash", txHash, "error", broadcastErr.Error(), "broadcast_result", broadcastResult.String())
+		logger := b.logger.With("tx_hash", txHash, "error", broadcastErr, "broadcast_result", broadcastResult.String())
 
 		logger.Debug("broadcaster::received from signAndBroadcast")
 		if broadcastErr != nil {
